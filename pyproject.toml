@@ -30,7 +30,7 @@ inference-lab = "inference_lab.cli:main"
 include = ["inference_lab*"]
 
 [tool.setuptools.package-data]
-inference_lab = ["missions/data/*.yaml", "tutor/knowledge/*.yaml", "research/*.yaml"]
+inference_lab = ["missions/data/*.yaml", "tutor/knowledge/*.yaml", "research/*.yaml", "locales/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

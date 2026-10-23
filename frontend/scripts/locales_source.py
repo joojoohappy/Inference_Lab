@@ -97,7 +97,7 @@ S = {
  "missions.verifiedSteps": ("{{v}}/{{r}} steps verified", "已驗證 {{v}}/{{r}} 步"),
  "missions.scanFirst": ("Scan your machine first (Mission 01) so the lab knows which paths are available.", "請先掃描你的機器（任務 01），Lab 才知道哪些路徑可用。"),
  "missions.lockNote": ("A mission unlocks when its prerequisites are verified by checks, not by clicking through.", "任務要等前置任務通過檢查驗證後才會解鎖，不是點過去就算。"),
- "missions.notFound": ("Mission not found.", "找不到這個任務。"), "missions.all": ("← All missions", "← 所有任務"),
+ "missions.notFound": ("Mission not found.", "找不到這個任務。"), "missions.all": ("All missions", "所有任務"),
  "missions.prereq": ("Complete first: {{list}}", "請先完成：{{list}}"), "missions.objectives": ("Objectives", "目標"),
  "missions.evidence": ("Completion evidence", "完成證據"),
  "missions.observeIntro": ("Observe mode: the lab runs the steps that need no approval and explains each result. Steps that need approval or missing hardware are skipped and shown as such.", "觀察模式：Lab 會執行不需要核准的步驟，並解說每個結果。需要核准或缺少硬體的步驟會被跳過，並清楚標示。"),

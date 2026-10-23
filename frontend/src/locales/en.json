@@ -208,7 +208,7 @@
     "scanFirst": "Scan your machine first (Mission 01) so the lab knows which paths are available.",
     "lockNote": "A mission unlocks when its prerequisites are verified by checks, not by clicking through.",
     "notFound": "Mission not found.",
-    "all": "← All missions",
+    "all": "All missions",
     "prereq": "Complete first: {{list}}",
     "objectives": "Objectives",
     "evidence": "Completion evidence",
