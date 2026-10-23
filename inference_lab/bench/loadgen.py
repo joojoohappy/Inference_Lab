@@ -40,6 +40,7 @@ class BenchConfig:
     trials: int = 3
     timeout_s: float = 60.0
     ignore_eos: bool = True  # fixed output length makes runs comparable
+    extra_body: dict[str, Any] = field(default_factory=dict)  # engine-specific fields, e.g. llama.cpp cache_prompt
 
     def validate(self) -> "BenchConfig":
         if not self.base_url.startswith(("http://127.0.0.1", "http://localhost")):
@@ -109,7 +110,7 @@ class ResourceSampler:
 
 async def _one(client: httpx.AsyncClient, cfg: BenchConfig) -> RequestSample:
     body = {"model": cfg.model, "prompt": cfg.prompt, "max_tokens": cfg.max_tokens, "temperature": 0.0,
-            "stream": True, "ignore_eos": cfg.ignore_eos, "stream_options": {"include_usage": True}}
+            "stream": True, "ignore_eos": cfg.ignore_eos, "stream_options": {"include_usage": True}, **cfg.extra_body}
     start = time.perf_counter()
     ttft = None
     chunks = 0

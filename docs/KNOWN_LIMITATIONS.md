@@ -9,7 +9,6 @@
 | AI tutor providers (Anthropic SDK, local OpenAI-compatible) | No API key and no `anthropic` package installed; no paid calls were made | Code written against the official SDK; never called. The curated tutor is fully tested |
 | App Docker image (`Dockerfile`) | No Docker daemon | Not built |
 | The requester's original benchmark repository | Found later at `llmbench/llm-inference-bench` | **Integrated**: llama.cpp CPU / Adreno engines reuse its binaries and GGUF models (`inference_lab/integrations/llmbench.py`) |
-| Prompt caching on llama.cpp | llama-server caches prompts by default; llmbench disables it with `cache_prompt=false` | Not disabled here yet, so repeated identical prompts have a slightly lower TTFT than llmbench measures |
 
 ## Design limits
 

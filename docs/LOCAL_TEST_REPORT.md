@@ -24,13 +24,16 @@ Closed loop, concurrency 1, 64 output tokens, 4 requests × 2 trials, 1 warm-up.
 
 | Engine | TTFT p50 | TPOT p50 | Output tok/s | Errors |
 |---|---|---|---|---|
-| llama.cpp CPU | 30 ms | 28.1 ms | 35.5 | 0 |
-| llama.cpp Adreno GPU (OpenCL, all layers offloaded) | 64 ms | 50.7 ms | 19.6 | 0 |
+| llama.cpp CPU | 78 ms | 29.3 ms | 33.0 | 0 |
+| llama.cpp Adreno GPU (OpenCL, all layers offloaded) | 231 ms | 53.5 ms | 17.8 | 0 |
+
+Prompt caching is off (`cache_prompt=false`, as in llmbench). A first run with caching left on gave
+CPU 35.5 / Adreno 19.6 tok/s and TTFT 30 / 64 ms, because repeated prompts skipped prefill.
 
 Cross-check against llmbench's own overnight run (128 in / 128 out, concurrency 1): CPU 30.5 tok/s,
 Adreno 18.6 tok/s, TPOT 50.0 ms on Adreno. Inference Lab's numbers agree; on this laptop the Adreno
-OpenCL backend decodes slower than the CPU. The prompts differ (Inference Lab uses a short fixed prompt
-with prompt caching left on), so TTFT is not directly comparable with llmbench's.
+OpenCL backend decodes slower than the CPU. The prompts differ (Inference Lab uses a short fixed prompt),
+so TTFT is not directly comparable with llmbench's.
 
 ## Changes made for this machine
 

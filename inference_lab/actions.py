@@ -373,7 +373,9 @@ def _bench(ctx: Ctx, p: BenchParams) -> dict[str, Any]:
         raise ActionError("no_healthy_server", "start a server first (Mission 04)")
     cfg = BenchConfig(base_url=srv.base_url, model=srv.model, prompt=p.prompt, max_tokens=p.max_tokens,
                       concurrency=p.concurrency, num_requests=p.num_requests, warmup_requests=p.warmup_requests,
-                      trials=p.trials, timeout_s=p.timeout_s)
+                      trials=p.trials, timeout_s=p.timeout_s,
+                      # same as llmbench: no prompt reuse, so every request pays its full prefill
+                      extra_body={"cache_prompt": False} if srv.kind.startswith("llamacpp") else {})
     res = run_benchmark(cfg, server_pid=ctx.lab.servers._proc.pid if ctx.lab.servers._proc else None,
                         log=ctx.log, progress=ctx.progress)
     scan = ctx.lab.scan()
