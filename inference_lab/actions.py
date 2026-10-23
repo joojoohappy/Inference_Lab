@@ -30,7 +30,8 @@ from .bench.loadgen import DEFAULT_PROMPT, BenchConfig, run_benchmark
 from .config import load_settings
 from .experiments import ExperimentStore, compare_records, new_record
 from .provenance import Provenance
-from .serving.manager import ServerManager, mini_argv, vllm_argv
+from .integrations import llmbench
+from .serving.manager import ServerManager, llamacpp_argv, mini_argv, vllm_argv
 
 # --------------------------------------------------------------------------- parameters
 
@@ -59,8 +60,27 @@ class InferParams(ModelParams):
 
 
 class ServerParams(ModelParams):
-    kind: str = Field(default="mini", pattern=r"^(mini|vllm)$")
+    kind: str = Field(default="mini", pattern=r"^(mini|vllm|llamacpp-cpu|llamacpp-adreno)$")
     port: int = Field(default=8800, ge=1024, le=65535)
+
+    @field_validator("model")
+    @classmethod
+    def _valid(cls, v: str) -> str:
+        # llama.cpp servers take GGUF files from the llmbench folder: gguf:<name>
+        if llmbench.GGUF_REF.match(v):
+            return v
+        return v if v == inference.TINY_MODEL_REF else hub.normalize_model_ref(v)
+
+
+def _server_argv(p: ServerParams) -> list[str]:
+    if p.kind == "mini":
+        return mini_argv(p.model, p.port)
+    if p.kind == "vllm":
+        return vllm_argv(p.model, p.port)
+    try:
+        return llamacpp_argv(p.model, p.port, p.kind.split("-", 1)[1])
+    except (FileNotFoundError, ValueError) as e:
+        return ["# " + str(e)]
 
 
 class BenchParams(BaseModel):
@@ -298,6 +318,18 @@ def _server_start(ctx: Ctx, p: ServerParams) -> dict[str, Any]:
             raise ActionError("capability_missing:vllm_docker", "vLLM serving needs an NVIDIA GPU and a running Docker daemon")
         info = ctx.lab.servers.start_vllm(p.model, p.port)
         timeout = 900
+    elif p.kind.startswith("llamacpp"):
+        backend = p.kind.split("-", 1)[1]
+        if not llmbench.GGUF_REF.match(p.model):
+            raise ActionError("not_a_gguf_model", "llama.cpp servers take gguf:<name> models from the llmbench folder")
+        if not scan["capabilities"].get(f"llamacpp_{backend}"):
+            raise ActionError(f"capability_missing:llamacpp_{backend}",
+                              "llama-server for this backend was not found in the llmbench tools folder")
+        try:
+            info = ctx.lab.servers.start_llamacpp(p.model, p.port, backend)
+        except FileNotFoundError as e:
+            raise ActionError("model_not_local", str(e)) from e
+        timeout = 300
     else:
         if p.model == inference.TINY_MODEL_REF and not inference.model_dir_for(p.model).joinpath("config.json").exists():
             inference.build_tiny_model(log=ctx.log)
@@ -351,7 +383,8 @@ def _bench(ctx: Ctx, p: BenchParams) -> dict[str, Any]:
     prov = Provenance.LIVE_MEASURED if any_ok else Provenance.FAILED
     ctx.run.provenance = prov.value
     version = ctx.lab.servers.version() or {}
-    engine = {"name": "vllm" if srv.kind == "vllm" else "inference-lab-mini",
+    engine = {"name": {"vllm": "vllm", "llamacpp-cpu": "llama.cpp-cpu",
+                       "llamacpp-adreno": "llama.cpp-adreno-opencl"}.get(srv.kind, "inference-lab-mini"),
               "version": version.get("version") or version.get("transformers"), "details": version}
     rec = new_record("benchmark", prov, model={"id": srv.model, "revision": _local_revision(srv.model)},
                      hardware=hardware.hardware_fingerprint(scan), engine=engine,
@@ -421,12 +454,14 @@ ACTIONS: dict[str, ActionSpec] = {a.id: a for a in [
                [("inference_lab/inference.py", "run_inference"), ("inference_lab/inference.py", "_TokenClock")],
                ["tests/test_inference.py"], requires=["cpu_inference"], timeout_s=600),
     ActionSpec("server.start", ServerParams, _server_start,
-               lambda p: shlex.join(mini_argv(p.model, p.port) if p.kind == "mini" else vllm_argv(p.model, p.port)),
+               lambda p: shlex.join(_server_argv(p)),
                [("inference_lab/serving/manager.py", "mini_argv"), ("inference_lab/serving/manager.py", "vllm_argv"),
+                ("inference_lab/serving/manager.py", "llamacpp_argv"),
                 ("inference_lab/serving/manager.py", "ServerManager"),
                 ("inference_lab/serving/mini_server.py", "create_app")],
                ["tests/test_serving.py"], approval=_server_approval, requires=["cpu_inference"], timeout_s=900,
-               extra_requires=lambda p: ["vllm_docker", "hub_access"] if p.kind == "vllm" else []),
+               extra_requires=lambda p: (["vllm_docker", "hub_access"] if p.kind == "vllm" else
+                                         [p.kind.replace("-", "_")] if p.kind.startswith("llamacpp") else [])),
     ActionSpec("server.health", NoParams, _server_health,
                lambda p: "curl -s http://127.0.0.1:<port>/health",
                [("inference_lab/serving/manager.py", "ServerManager")], ["tests/test_serving.py"], timeout_s=10),

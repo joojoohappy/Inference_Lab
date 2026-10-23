@@ -73,6 +73,18 @@ inference-lab report <id> <id> --lang zh-TW
 請參考 `docker/vllm/docker-compose.yml`。建置環境沒有 GPU，所以這條路徑**沒有實際執行過**。沒有 GPU 時，
 這些步驟會顯示為「未執行」，不會卡住你的進度。
 
+## 透過 llmbench 使用 llama.cpp（CPU 或 Adreno GPU）
+
+如果 llm-inference-bench 專案（llmbench）放在這個 repo 旁邊，Inference Lab 會直接使用它的 llama.cpp 執行檔
+（`tools/llama-cpu`、`tools/llama-adreno`）和 GGUF 模型（`models/*.gguf`），不會複製或修改。放在別處時請設定
+`INFERENCE_LAB_LLMBENCH_DIR`。模型名稱寫成 `gguf:<檔名>`。
+
+```bash
+inference-lab bench --kind llamacpp-adreno --model gguf:qwen3-4b-instruct-2507-Q4_0 --port 8870 --max-tokens 64
+```
+
+實驗競技場也有這兩個引擎。在 Snapdragon X 筆電上的實測結果請見 [docs/LOCAL_TEST_REPORT.md](docs/LOCAL_TEST_REPORT.md)。
+
 ## 選用的 AI 家教
 
 不需要任何付費 API，家教也能運作（使用人工整理的解說和 docstring）。若要接上模型，請看英文 README 的

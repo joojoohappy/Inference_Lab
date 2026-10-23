@@ -76,6 +76,19 @@ With an NVIDIA GPU, the NVIDIA Container Toolkit and Docker, Mission 04 can star
 (`vllm/vllm-openai`, bound to 127.0.0.1). See `docker/vllm/docker-compose.yml`. This path was **not executed** in
 the build environment (no GPU). Without a GPU those steps show as NOT RUN and never block your progress.
 
+## llama.cpp via llmbench (CPU or Adreno GPU)
+
+If the [llm-inference-bench](../llmbench/llm-inference-bench) project (llmbench) sits next to this repo, Inference Lab
+reuses its llama.cpp builds (`tools/llama-cpu`, `tools/llama-adreno`) and GGUF models (`models/*.gguf`) without copying
+or changing them. Set `INFERENCE_LAB_LLMBENCH_DIR` if it lives elsewhere. Models are referenced as `gguf:<file name>`.
+
+```bash
+inference-lab bench --kind llamacpp-adreno --model gguf:qwen3-4b-instruct-2507-Q4_0 --port 8870 --max-tokens 64
+```
+
+The Experiment Arena has the same two engines. Results from this path were measured on a Snapdragon X laptop; see
+[docs/LOCAL_TEST_REPORT.md](docs/LOCAL_TEST_REPORT.md).
+
 ## Optional AI tutor
 
 The tutor works without any paid API (curated explanations and docstrings). To add a model:

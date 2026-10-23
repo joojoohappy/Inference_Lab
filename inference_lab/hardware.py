@@ -168,11 +168,23 @@ def probe_hub() -> Probe:
                      data={"reachable": False, "error": type(e).__name__}, duration_ms=(time.perf_counter() - t) * 1000)
 
 
+def probe_llmbench() -> Probe:
+    """Is the sibling llmbench project here, with llama.cpp builds and GGUF models?"""
+    from .integrations import llmbench
+
+    t = time.perf_counter()
+    data = llmbench.probe()
+    status = "ok" if data["root"] and (data["llama_server_cpu"] or data["llama_server_adreno"]) else "not_found"
+    return Probe("llmbench", status, "look for <llmbench>/tools/llama-*/llama-server and <llmbench>/models/*.gguf",
+                 raw=str(data["root"]), data=data, duration_ms=(time.perf_counter() - t) * 1000)
+
+
 def capabilities(probes: dict[str, Probe]) -> dict[str, bool]:
     """Derive what this machine can do from probe results. Deterministic."""
     gpus = probes["gpu"].data.get("gpus", [])
     ml = probes["python_ml"].data
     docker = probes["docker"].data
+    lb = probes["llmbench"].data if "llmbench" in probes else {}
     return {
         "cpu_inference": bool(ml.get("torch") and ml.get("transformers")),
         "nvidia_gpu": bool(gpus),
@@ -181,12 +193,14 @@ def capabilities(probes: dict[str, Probe]) -> dict[str, bool]:
         "vllm_docker": bool(gpus) and bool(docker.get("daemon_running")),
         "vllm_python": bool(ml.get("vllm")),
         "hub_access": bool(probes["hub"].data.get("reachable")) if "hub" in probes else False,
+        "llamacpp_cpu": bool(lb.get("llama_server_cpu") and lb.get("models")),
+        "llamacpp_adreno": bool(lb.get("llama_server_adreno") and lb.get("models")),
     }
 
 
 def scan() -> dict[str, Any]:
     probes = {p.name: p for p in (probe_cpu(), probe_memory(), probe_gpu(), probe_docker(),
-                                         probe_python_ml(), probe_hub())}
+                                         probe_python_ml(), probe_hub(), probe_llmbench())}
     return {
         "probes": {k: asdict(v) for k, v in probes.items()},
         "capabilities": capabilities(probes),

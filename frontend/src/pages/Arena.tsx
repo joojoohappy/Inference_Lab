@@ -36,9 +36,15 @@ function useAction() {
   return { run, exec, pending, setPending };
 }
 
+type Kind = "mini" | "vllm" | "llamacpp-cpu" | "llamacpp-adreno";
+const DEFAULT_MODEL: Record<Kind, string> = {
+  mini: "lab/tiny-random", vllm: "lab/tiny-random",
+  "llamacpp-cpu": "gguf:qwen3-4b-instruct-2507-Q4_0", "llamacpp-adreno": "gguf:qwen3-4b-instruct-2507-Q4_0",
+};
+
 function ServerPanel() {
   const { t } = useTranslation();
-  const [kind, setKind] = useState<"mini" | "vllm">("mini");
+  const [kind, setKind] = useState<Kind>("mini");
   const [model, setModel] = useState("lab/tiny-random");
   const [health, setHealth] = useState<any>(null);
   const { run, exec, pending, setPending } = useAction();
@@ -54,9 +60,11 @@ function ServerPanel() {
       <p className="sub">{t("arena.serverSub")}</p>
       <div className="row" style={{ flexWrap: "wrap" }}>
         <label className="field">{t("arena.engine")}
-          <select value={kind} onChange={(e) => setKind(e.target.value as "mini" | "vllm")}>
+          <select value={kind} onChange={(e) => { const k = e.target.value as Kind; setKind(k); setModel(DEFAULT_MODEL[k]); }} data-testid="server-kind">
             <option value="mini">{t("arena.engineMini")}</option>
             <option value="vllm">{t("arena.engineVllm")}</option>
+            <option value="llamacpp-cpu">{t("arena.engineLlamaCpu")}</option>
+            <option value="llamacpp-adreno">{t("arena.engineLlamaAdreno")}</option>
           </select>
         </label>
         <label className="field">{t("garage.model")}<input className="mono" value={model} onChange={(e) => setModel(e.target.value)} /></label>

@@ -4,11 +4,12 @@
 
 | Item | Why | Status |
 |---|---|---|
-| GPU inference, vLLM serving (Mission 03 s4, Mission 04 s4), GPU tests | No NVIDIA GPU, no Docker daemon | Implemented; reported **NOT RUN**. vLLM argv and compose file are untested on real hardware; the image's CLI flags may need adjusting for a given vLLM release |
-| Hugging Face Hub inspection and downloads | `huggingface.co` blocked by the build network | Implemented against the documented API; parsing is unit-tested with fixture data; live calls returned NOT RUN |
+| GPU inference, vLLM serving (Mission 03 s4, Mission 04 s4), GPU tests | No NVIDIA GPU (the cloud VM had none; the owner's Snapdragon X laptop has an Adreno GPU, which vLLM does not support) | Implemented; reported **NOT RUN**. vLLM argv and compose file are untested on real hardware; the image's CLI flags may need adjusting for a given vLLM release |
+| Hugging Face Hub inspection and downloads | `huggingface.co` blocked by the build network | **Verified 2026-10-24** on the owner's laptop: live inspect, approval gate, and a 260 MiB download (SmolLM2-135M-Instruct) |
 | AI tutor providers (Anthropic SDK, local OpenAI-compatible) | No API key and no `anthropic` package installed; no paid calls were made | Code written against the official SDK; never called. The curated tutor is fully tested |
 | App Docker image (`Dockerfile`) | No Docker daemon | Not built |
-| The requester's original benchmark repository | Not found (see ARCHITECTURE_AUDIT.md) | Not integrated; import seam provided |
+| The requester's original benchmark repository | Found later at `llmbench/llm-inference-bench` | **Integrated**: llama.cpp CPU / Adreno engines reuse its binaries and GGUF models (`inference_lab/integrations/llmbench.py`) |
+| Prompt caching on llama.cpp | llama-server caches prompts by default; llmbench disables it with `cache_prompt=false` | Not disabled here yet, so repeated identical prompts have a slightly lower TTFT than llmbench measures |
 
 ## Design limits
 

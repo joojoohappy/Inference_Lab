@@ -57,6 +57,9 @@ def _summary(run: Run) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # Windows consoles (e.g. cp950) cannot print every token
+        if hasattr(stream, "reconfigure") and (stream.encoding or "").lower().replace("-", "") != "utf8":
+            stream.reconfigure(errors="replace")
     ap = argparse.ArgumentParser(prog="inference-lab", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--json", action="store_true", help="print the full run record as JSON")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -79,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--max-new-tokens", type=int, default=24)
     p = sub.add_parser("bench")
     p.add_argument("--model", default="lab/tiny-random")
-    p.add_argument("--kind", choices=["mini", "vllm"], default="mini")
+    p.add_argument("--kind", choices=["mini", "vllm", "llamacpp-cpu", "llamacpp-adreno"], default="mini")
     p.add_argument("--port", type=int, default=8800)
     p.add_argument("--concurrency", type=int, default=1)
     p.add_argument("--max-tokens", type=int, default=16)

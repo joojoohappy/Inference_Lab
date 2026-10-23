@@ -17,7 +17,8 @@ def lab_home(tmp_path, monkeypatch):
 
 def fake_scan(**caps: bool) -> dict:
     base = {"cpu_inference": True, "nvidia_gpu": False, "cuda_torch": False, "docker": False,
-            "vllm_docker": False, "vllm_python": False, "hub_access": False}
+            "vllm_docker": False, "vllm_python": False, "hub_access": False,
+            "llamacpp_cpu": False, "llamacpp_adreno": False}
     base.update(caps)
     return {
         "summary": {"cpu_model": "Test CPU", "logical_cores": 4, "ram_total_gb": 16.0, "vram_total_gb": 0},

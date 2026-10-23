@@ -39,4 +39,5 @@ testpaths = ["tests"]
 markers = [
   "inference: needs torch + transformers installed (CPU is enough)",
   "gpu: needs an NVIDIA GPU; reported as NOT RUN when absent",
+  "llamacpp: needs the sibling llmbench folder (llama-server + GGUF); reported as NOT RUN when absent",
 ]

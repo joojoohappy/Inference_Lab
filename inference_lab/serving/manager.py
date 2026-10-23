@@ -1,7 +1,8 @@
-"""Start, check, and stop model servers. Only two fixed launch recipes exist:
+"""Start, check, and stop model servers. Only three fixed launch recipes exist:
 
-  * mini:  python -m inference_lab.serving.mini_server   (CPU or GPU, Transformers)
-  * vllm:  docker run ... vllm/vllm-openai               (NVIDIA GPU + Docker required)
+  * mini:     python -m inference_lab.serving.mini_server   (CPU or GPU, Transformers)
+  * vllm:     docker run ... vllm/vllm-openai               (NVIDIA GPU + Docker required)
+  * llamacpp: llmbench's llama-server, CPU or Adreno GPU    (GGUF files from llmbench)
 
 Arguments are validated and passed as an argv list (never through a shell).
 Servers bind to 127.0.0.1 only.
@@ -22,6 +23,7 @@ import httpx
 
 from ..config import REPO_ROOT, load_settings
 from ..hub import normalize_model_ref
+from ..integrations import llmbench
 from ..inference import TINY_MODEL_REF
 
 VLLM_IMAGE = os.environ.get("INFERENCE_LAB_VLLM_IMAGE", "vllm/vllm-openai:latest")
@@ -70,6 +72,21 @@ def vllm_argv(model: str, port: int, max_model_len: int = 2048, gpu_memory_utili
             "--gpu-memory-utilization", str(gpu_memory_utilization)]
 
 
+def llamacpp_argv(model: str, port: int, backend: str = "cpu", ctx_size: int = 4096, slots: int = 4) -> list[str]:
+    """Same flags as llmbench's edge experiments (configs/experiments/edge_*.toml)."""
+    if port not in PORT_RANGE:
+        raise ValueError("port must be between 1024 and 65535")
+    if not (512 <= ctx_size <= 131072) or not (1 <= slots <= 64):
+        raise ValueError("ctx_size or slots out of range")
+    exe = llmbench.server_binary(backend)
+    if exe is None:
+        raise FileNotFoundError(f"llama-server for backend '{backend}' not found in the llmbench tools folder")
+    path = llmbench.resolve_model(model)
+    return [str(exe), "-m", str(path), "--host", "127.0.0.1", "--port", str(port), "--alias", model,
+            "-c", str(ctx_size), "-np", str(slots), "--metrics", "--jinja",
+            "-ngl", "99" if backend == "adreno" else "0"]
+
+
 class ServerManager:
     def __init__(self) -> None:
         self.current: ServerInfo | None = None
@@ -83,6 +100,15 @@ class ServerManager:
         env = {**os.environ, "PYTHONPATH": str(REPO_ROOT)}
         self._proc = subprocess.Popen(argv, stdout=logf, stderr=subprocess.STDOUT, cwd=REPO_ROOT, env=env)
         self.current = ServerInfo("mini", model, port, argv, pid=self._proc.pid, log_path=str(log_path))
+        return self.current
+
+    def start_llamacpp(self, model: str, port: int = 8080, backend: str = "cpu", **kw: Any) -> ServerInfo:
+        self.stop()
+        argv = llamacpp_argv(model, port, backend, **kw)
+        log_path = load_settings().ensure().runs_dir / f"llamacpp-{backend}-{port}.log"
+        logf = open(log_path, "w", encoding="utf-8")  # noqa: SIM115 - handle owned by the child
+        self._proc = subprocess.Popen(argv, stdout=logf, stderr=subprocess.STDOUT, cwd=Path(argv[0]).parent)
+        self.current = ServerInfo(f"llamacpp-{backend}", model, port, argv, pid=self._proc.pid, log_path=str(log_path))
         return self.current
 
     def start_vllm(self, model: str, port: int = 8000, **kw: Any) -> ServerInfo:
@@ -133,6 +159,15 @@ class ServerManager:
         if not self.current:
             return None
         try:
+            if self.current.kind.startswith("llamacpp"):
+                r = httpx.get(self.current.base_url + "/props", timeout=2.0)
+                if r.status_code != 200:
+                    return None
+                props = r.json()
+                return {"version": props.get("build_info"), "engine": "llama.cpp",
+                        "model_path": props.get("model_path"),
+                        "n_ctx": (props.get("default_generation_settings") or {}).get("n_ctx"),
+                        "total_slots": props.get("total_slots")}
             r = httpx.get(self.current.base_url + "/version", timeout=2.0)
             return r.json() if r.status_code == 200 else None
         except (httpx.HTTPError, ValueError):

@@ -450,6 +450,8 @@
     "engine": "Engine",
     "engineMini": "Mini server (CPU, Transformers)",
     "engineVllm": "vLLM (GPU, Docker)",
+    "engineLlamaCpu": "llama.cpp CPU (llmbench, GGUF)",
+    "engineLlamaAdreno": "llama.cpp Adreno GPU (llmbench, GGUF)",
     "start": "Start",
     "health": "Check health",
     "stop": "Stop",

@@ -1,9 +1,10 @@
+import { fileURLToPath } from "node:url";
 // i18n check: (1) en and zh-TW have exactly the same keys, no empty values, same {{placeholders}};
 // (2) every static t("key") used in src exists; (3) every dynamic key family has all its known members.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const flat = (o, p = "") => Object.entries(o).flatMap(([k, v]) => (typeof v === "object" ? flat(v, `${p}${k}.`) : [[`${p}${k}`, v]]));
 const en = Object.fromEntries(flat(JSON.parse(readFileSync(join(root, "src/locales/en.json"), "utf8"))));
 const zh = Object.fromEntries(flat(JSON.parse(readFileSync(join(root, "src/locales/zh-TW.json"), "utf8"))));
