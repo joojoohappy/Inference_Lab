@@ -1,0 +1,553 @@
+{
+  "provenance": {
+    "LIVE_MEASURED": {
+      "label": "現場實測",
+      "help": "在這台機器、這次工作階段中，由 Code Explorer 裡顯示的程式碼實際量測。"
+    },
+    "VERIFIED_IMPORTED": {
+      "label": "已驗證匯入",
+      "help": "從結構與 checksum 都驗證過的檔案匯入。是在別處量測的，不是這台機器。"
+    },
+    "DEMO_SAMPLE": {
+      "label": "示範資料",
+      "help": "教學用的合成數字。不是量測結果，也絕不會被當作證據。"
+    },
+    "NOT_RUN": {
+      "label": "未執行",
+      "help": "這個步驟沒有執行，通常是因為這台機器缺少需要的能力。"
+    },
+    "FAILED": {
+      "label": "失敗",
+      "help": "這個步驟有執行但失敗了。失敗也會被保留成紀錄，不會被隱藏。"
+    }
+  },
+  "status": {
+    "pending": "等待中",
+    "running": "執行中",
+    "succeeded": "成功",
+    "failed": "失敗",
+    "blocked": "需要核准",
+    "not_run": "未執行",
+    "verified": "已驗證",
+    "check_failed": "檢查未通過",
+    "not_started": "尚未開始"
+  },
+  "common": {
+    "copy": "複製",
+    "copied": "已複製",
+    "close": "關閉",
+    "loading": "載入中…",
+    "cancel": "取消",
+    "yes": "是",
+    "no": "否"
+  },
+  "run": {
+    "command": "指令",
+    "elapsed": "已經過 {{s}} 秒",
+    "evidence": "證據",
+    "isItStuck": "是不是卡住了？",
+    "progress": "進度",
+    "approved": "你已核准：{{reason}}",
+    "log": "記錄",
+    "noLog": "還沒有記錄。",
+    "evidenceSeen": "Lab 目前看到的狀況",
+    "possibleCauses": "可能原因",
+    "nextSteps": "可以試試看",
+    "why": "原因",
+    "tryNext": "下一步",
+    "errorDetail": "錯誤細節",
+    "rawOutput": "原始輸出（JSON）"
+  },
+  "approval": {
+    "title": "需要你的核准",
+    "note": "在你核准之前不會執行任何東西。你也可以複製指令自己執行。",
+    "approve": "核准並執行",
+    "model_download_uses_network_and_disk": "下載模型會用到網路頻寬和磁碟空間。",
+    "vllm_uses_gpu_and_pulls_container_image": "vLLM 會使用 GPU，而且可能會下載很大的容器映像檔。",
+    "large_benchmark": "這個 benchmark 規模較大，可能要跑很久。"
+  },
+  "source": {
+    "executed": "實際執行的程式碼",
+    "executedHelp": "這是 Lab 實際執行的檔案，直接從磁碟讀取，不是示意程式碼。",
+    "lines": "第 {{a}}–{{b}} 行",
+    "codeRegion": "{{path}} 的原始碼",
+    "explain": "解釋這段程式碼",
+    "explainLevel": "解說深度",
+    "selectedLine": "已選取第 {{n}} 行",
+    "modifyTitle": "想修改它嗎？",
+    "modifyBody": "Explorer 是唯讀的。請在你自己的編輯器修改檔案，然後執行該步驟列出的相關測試。",
+    "view": "查看原始碼",
+    "title": "原始碼",
+    "openInExplorer": "在 Code Explorer 開啟",
+    "q": {
+      "line": "選取的這行在做什麼？",
+      "why": "為什麼要這樣寫？",
+      "change": "如果我改掉它會怎樣？",
+      "alternative": "常見的替代寫法是什麼？",
+      "docs": "哪份文件有解釋這個？"
+    }
+  },
+  "levels": {
+    "simple": "簡單說",
+    "logic": "邏輯",
+    "design": "設計",
+    "tradeoffs": "取捨"
+  },
+  "tutor": {
+    "source": {
+      "curated": "人工整理的解說",
+      "derived": "由你的資料推導",
+      "source": "取自程式碼的 docstring",
+      "ai": "AI 回答（請自行查證）",
+      "none": "找不到答案"
+    },
+    "teachMe": "教我這個",
+    "analogy": "比喻",
+    "ask": "問問家教",
+    "placeholder": "問這個步驟、程式碼或結果…",
+    "askButton": "提問"
+  },
+  "claim": {
+    "established": "公認事實",
+    "implementation": "這份程式碼的做法",
+    "heuristic": "經驗法則",
+    "assumption": "明確假設",
+    "engineering_heuristic": "工程經驗法則"
+  },
+  "charts": {
+    "compareAria": "比較 baseline 與 candidate 指標的長條圖",
+    "baseline": "Baseline（基準）",
+    "candidate": "Candidate（候選）",
+    "lowerBetter": "越低越好",
+    "higherBetter": "越高越好",
+    "stripAria": "每次 trial 中各請求端到端延遲的點狀圖",
+    "trial": "Trial {{n}}",
+    "sweepAria": "TTFT p50 對 concurrency 的折線圖",
+    "concurrency": "concurrency（同時請求數）"
+  },
+  "viz": {
+    "illustrative": "示意，非實測",
+    "kv": {
+      "title": "KV cache：整塊預留 vs 分頁",
+      "sub": "每一列是一個請求。青色是實際用到的快取，紅色是預留但浪費的記憶體。分頁配置（PagedAttention 的想法）會依需要配發小區塊。",
+      "requests": "請求數：{{n}}",
+      "maxLen": "最大長度：{{n}} tokens",
+      "contiguous": "連續配置（預留最大長度）",
+      "paged": "分頁配置（每塊 8 tokens）",
+      "waste": "浪費：{{pct}}%",
+      "usedLegend": "已使用",
+      "wasteLegend": "已預留但未使用"
+    },
+    "lt": {
+      "title": "延遲 vs 吞吐量",
+      "sub": "一次只處理一個請求的伺服器，會讓等待中的客戶端排隊；有 batching 的伺服器則會一起處理。",
+      "concurrency": "同時連線的客戶端：{{n}}",
+      "latency": "每個請求的延遲",
+      "throughput": "吞吐量",
+      "serial": "一次一個",
+      "batched": "Batching",
+      "assumptions": "玩具模型：單獨處理一個請求 40 ms；batch 中每多一個請求，每步時間增加 15%。真實伺服器會不一樣，請到 Arena 實測你的。"
+    }
+  },
+  "shell": {
+    "language": "語言",
+    "mode": "模式",
+    "skip": "跳到主要內容",
+    "tagline": "學會它、跑起來、看懂它、改進它。",
+    "nav": "主要區域",
+    "localOnly": "只在本機 127.0.0.1 執行。除非你核准，否則不會有任何東西離開這台機器。"
+  },
+  "modes": {
+    "observe": {
+      "label": "觀察",
+      "help": "看著核准的流程一步步執行，並附上解說。"
+    },
+    "guided": {
+      "label": "引導",
+      "help": "每個步驟由你自己執行，有提示和檢查。"
+    },
+    "expert": {
+      "label": "專家",
+      "help": "直接給指令和參數，解說較少。"
+    }
+  },
+  "areas": {
+    "lab": {
+      "name": "實驗室",
+      "desc": "你的機器、你的任務、你的進度。"
+    },
+    "garage": {
+      "name": "模型車庫",
+      "desc": "在下載或執行模型之前先檢查它。"
+    },
+    "missions": {
+      "name": "任務控制中心",
+      "desc": "七個任務：從認識硬體到為你的決策辯護。"
+    },
+    "code": {
+      "name": "程式碼探索",
+      "desc": "閱讀每個步驟實際執行的程式碼。"
+    },
+    "research": {
+      "name": "研究檔案館",
+      "desc": "這些概念背後的一手來源，只收錄查核過的連結。"
+    },
+    "arena": {
+      "name": "實驗競技場",
+      "desc": "啟動服務、跑 benchmark，用真實量測做比較。"
+    },
+    "journal": {
+      "name": "工程日誌",
+      "desc": "每一次實驗與執行，包含失敗的。附來源標示的報告。"
+    }
+  },
+  "missions": {
+    "number": "任務 {{n}}",
+    "progressAria": "必要步驟已驗證 {{v}} / {{r}}",
+    "verifiedSteps": "已驗證 {{v}}/{{r}} 步",
+    "scanFirst": "請先掃描你的機器（任務 01），Lab 才知道哪些路徑可用。",
+    "lockNote": "任務要等前置任務通過檢查驗證後才會解鎖，不是點過去就算。",
+    "notFound": "找不到這個任務。",
+    "all": "← 所有任務",
+    "prereq": "請先完成：{{list}}",
+    "objectives": "目標",
+    "evidence": "完成證據",
+    "observeIntro": "觀察模式：Lab 會執行不需要核准的步驟，並解說每個結果。需要核准或缺少硬體的步驟會被跳過，並清楚標示。",
+    "observeRun": "執行已核准的流程",
+    "observeRunning": "執行中…",
+    "optionalExperiments": "延伸實驗",
+    "step": "步驟 {{n}}",
+    "optional": "選做",
+    "what": "做什麼",
+    "why": "為什麼",
+    "whatWhy": "做什麼、為什麼",
+    "missingCaps": "這台機器無法執行（需要：{{caps}}），會被記錄為「未執行」。",
+    "willRun": "將會執行",
+    "expected": "預期結果",
+    "approveRun": "檢視並核准",
+    "running": "執行中…",
+    "runAgain": "再執行一次",
+    "run": "執行",
+    "runWithoutApproval": "不核准直接試（會被擋下）",
+    "validation": "驗證",
+    "validationNote": "檢查是針對實際輸出的確定性規則。家教永遠不會決定是否完成。",
+    "lastAttempt": "上次嘗試：{{status}}",
+    "reproduceAlternatives": "自己重現 / 其他做法",
+    "reproduce": "在終端機自己執行",
+    "alternatives": "其他做法",
+    "failure": "如果失敗"
+  },
+  "missionState": {
+    "locked": "未解鎖",
+    "available": "可開始",
+    "in_progress": "進行中",
+    "complete": "已完成",
+    "not_available": "此機器無法進行"
+  },
+  "mastery": {
+    "none": "尚未開始",
+    "started": "起步",
+    "practiced": "熟練中",
+    "independent": "能獨立完成"
+  },
+  "stepStatus": {
+    "verified": "已驗證",
+    "pending": "尚未驗證",
+    "not_available": "無法進行"
+  },
+  "checks": {
+    "passed": "通過",
+    "failed": "未通過",
+    "missing": "缺少資料"
+  },
+  "caps": {
+    "cpu_inference": "CPU 推論（torch + transformers）",
+    "nvidia_gpu": "NVIDIA GPU",
+    "cuda_torch": "支援 CUDA 的 PyTorch",
+    "docker": "Docker daemon",
+    "vllm_docker": "透過 Docker + GPU 執行 vLLM",
+    "vllm_python": "vLLM Python 套件",
+    "hub_access": "可連上 Hugging Face Hub"
+  },
+  "quiz": {
+    "check": "檢查答案",
+    "alreadyCorrect": "已經答對了",
+    "correct": "答對了。",
+    "tryAgain": "不太對，再試一次。"
+  },
+  "hints": {
+    "n": "提示 {{n}}",
+    "first": "顯示提示",
+    "more": "再一個提示（剩 {{left}} 個）"
+  },
+  "challenge": {
+    "label": "挑戰",
+    "title": "不看步驟自己完成",
+    "done": "挑戰已驗證",
+    "noHints": "這裡沒有提示，由同樣的檢查判斷你是否完成。",
+    "submit": "執行挑戰"
+  },
+  "lab": {
+    "machine": "你的機器",
+    "rescan": "重新掃描",
+    "scan": "掃描我的機器",
+    "machineIntro": "從這裡開始。掃描只會執行固定的唯讀指令（nvidia-smi、docker version、Python 匯入），並記錄找到的結果。",
+    "threads": "{{n}} 個執行緒",
+    "noGpu": "沒有找到 NVIDIA GPU",
+    "noGpuHelp": "沒關係：每個核心任務都有 CPU 路徑。GPU 步驟會標示為「未執行」。",
+    "dockerNoDaemon": "只有 client，daemon 沒有在執行",
+    "notFound": "沒有找到",
+    "welcome": "歡迎來到 Inference Lab",
+    "welcomeSub": "在你自己的硬體上跑真的模型、誠實地量測、讀懂執行它的程式碼，然後決定要改什麼。",
+    "continue": "繼續下一個任務",
+    "allMissions": "所有任務",
+    "missions": "任務",
+    "skills": "技能",
+    "skillsSub": "從通過驗證的步驟獲得，不是靠點擊。",
+    "noSkills": "還沒有技能。完成並驗證一個步驟就能獲得。",
+    "recent": "最近的結果",
+    "noResults": "還沒有實驗。",
+    "activity": "活動",
+    "noRuns": "還沒有執行任何東西。"
+  },
+  "skills": {
+    "m01-meet-your-machine": "看懂硬體的限制",
+    "m02-find-your-model": "安全地檢查模型",
+    "m03-wake-it-up": "執行並計時本機推論",
+    "m04-build-your-server": "透過 HTTP 提供模型服務",
+    "m05-put-it-to-the-test": "用誠實的方法跑 benchmark",
+    "m06-hunt-the-bottleneck": "一次只改一個變數並比較",
+    "m07-defend-your-decision": "用證據為決策辯護"
+  },
+  "kinds": {
+    "hardware": "硬體掃描",
+    "inference": "推論",
+    "benchmark": "Benchmark"
+  },
+  "garage": {
+    "metadata": "中繼資料",
+    "f": {
+      "id": "模型 ID",
+      "source": "來源",
+      "revision": "版本（revision）",
+      "task": "任務類型",
+      "arch": "架構",
+      "params": "參數量",
+      "license": "授權",
+      "gated": "需申請存取",
+      "formats": "權重格式",
+      "size": "大小",
+      "tokenizer": "Tokenizer",
+      "chat": "Chat template",
+      "remoteCode": "需要遠端程式碼",
+      "frameworks": "框架支援"
+    },
+    "source": {
+      "huggingface_hub_api": "Hugging Face Hub API",
+      "local_files": "本機檔案"
+    },
+    "unknown": "未知",
+    "pickleOnly": "只有 pickle（拒絕）",
+    "downloadSize": "下載 {{size}}",
+    "remoteCodeYes": "是（拒絕）",
+    "vllmCheck": "查看 vLLM 支援的模型",
+    "memory": "記憶體估算",
+    "estimate": "估算",
+    "weights": "權重",
+    "kv": "KV cache",
+    "total": "總計",
+    "noEstimate": "中繼資料不足，無法估算記憶體。",
+    "assumptions": "假設",
+    "compat": "與這台機器的相容性",
+    "verdict": {
+      "fits_gpu": "可放進 GPU",
+      "cpu_only": "只能用 CPU",
+      "too_large": "對這台機器來說太大",
+      "unknown": "未知"
+    },
+    "paths": "可行路徑",
+    "path": {
+      "gpu_transformers": "GPU + Transformers",
+      "gpu_vllm": "GPU + vLLM",
+      "cpu_transformers": "CPU + Transformers"
+    },
+    "card": "Model card",
+    "twoWorkflows": "兩種流程：用 ID 或網址檢查 Hub 上的模型（只讀中繼資料，不下載），或檢查已經在磁碟上的模型。",
+    "inspectTitle": "檢查模型",
+    "inspectSub": "貼上 Hugging Face 模型 ID 或 https://huggingface.co/… 網址。",
+    "inputLabel": "模型 ID 或網址",
+    "inspectHub": "在 Hub 檢查",
+    "inspectLocal": "檢查本機",
+    "invalidInput": "輸入無效",
+    "download": "下載（需要核准）",
+    "downloadRefused": "拒絕下載：{{reason}}",
+    "modelChanged": "注意：現在顯示的是新模型，前一個是 {{prev}}。",
+    "catalog": "入門模型",
+    "catalogSub": "可以在 CPU 上跑的小模型。最小的那個在本機建立，不需要網路。",
+    "size": {
+      "tiny": "極小",
+      "small": "小型"
+    },
+    "build": "在本機建立",
+    "local": "這台機器上的模型",
+    "noLocal": "還沒有本機模型。先建立 tiny 模型開始吧。",
+    "tryInference": "試跑推論",
+    "model": "模型",
+    "prompt": "提示詞（prompt）",
+    "generate": "生成",
+    "expectedDisk": "預計使用的磁碟空間",
+    "files": "檔案",
+    "inputTokens": "輸入：{{n}} 個 token",
+    "outputTokens": "輸出：{{n}} 個 token",
+    "randomNote": "這個模型的權重是隨機的，所以文字是亂碼。但計時和 token 都是真的。"
+  },
+  "code": {
+    "files": "檔案",
+    "filter": "篩選",
+    "pick": "從左邊選一個檔案，或在任務步驟中按「查看原始碼」。",
+    "legendTitle": "你正在看的是什麼",
+    "illustrative": "示意",
+    "suggested": "建議修改",
+    "legendExecuted": "這個 repository 中的真實檔案，也就是實際執行的程式碼。",
+    "legendIllustrative": "解說中簡化過的片段，出現時都會標示。",
+    "legendSuggested": "家教提出的修改建議，絕不會自動套用。",
+    "readOnly": "唯讀。不會提供密鑰、.env 檔、.git 和相依套件。"
+  },
+  "research": {
+    "intro": "每筆紀錄都連到一手來源，並說明怎麼查核的。無法驗證的來源會被標示出來。",
+    "filter": "依概念篩選",
+    "all": "全部",
+    "sources": "來源（{{n}}）",
+    "none": "這個概念沒有來源。",
+    "pick": "選一個來源來閱讀摘要。",
+    "kind": {
+      "paper": "論文",
+      "documentation": "文件",
+      "book_chapter": "書籍章節",
+      "benchmark": "Benchmark"
+    },
+    "verification": {
+      "fetched": "已查核",
+      "not_fetched": "未驗證"
+    },
+    "checkedOn": "{{date}} 擷取；已核對：{{fields}}",
+    "section": {
+      "beginner": "給初學者",
+      "engineering": "工程觀點",
+      "contributions": "主要貢獻",
+      "practical": "跟這裡的關係",
+      "limitations": "限制"
+    },
+    "concepts": "概念",
+    "missions": "相關任務",
+    "visuals": "互動圖解"
+  },
+  "arena": {
+    "server": "伺服器",
+    "healthy": "正常",
+    "noServer": "沒有伺服器",
+    "serverSub": "啟動綁定在 127.0.0.1 的 OpenAI 相容伺服器。mini server 跑在 CPU 上；vLLM 需要 GPU 和 Docker。",
+    "engine": "引擎",
+    "engineMini": "Mini server（CPU、Transformers）",
+    "engineVllm": "vLLM（GPU、Docker）",
+    "start": "啟動",
+    "health": "檢查狀態",
+    "stop": "停止",
+    "bench": "Benchmark",
+    "benchSub": "封閉迴路負載：每個虛擬客戶端在前一個請求完成後才送出下一個。暖機請求不計入結果。",
+    "p": {
+      "concurrency": "concurrency",
+      "max_tokens": "max_tokens",
+      "num_requests": "num_requests",
+      "warmup_requests": "warmup_requests",
+      "trials": "trials",
+      "hypothesis": "假設（選填）"
+    },
+    "hypothesisPh": "例如：因為 mini server 是序列處理，TTFT 會隨 concurrency 上升",
+    "runBench": "執行 benchmark",
+    "benchNote": "需要正常運作的伺服器。結果會存成「現場實測」實驗。",
+    "compare": "比較兩個實驗",
+    "compareSub": "公平的比較只改一個變數，Lab 會幫你檢查。",
+    "needTwo": "至少要跑兩次 benchmark 才能比較。",
+    "compareBtn": "比較",
+    "comparable": "可比較",
+    "notComparable": "不是乾淨的比較",
+    "differences": "改變了什麼",
+    "warn": {
+      "non_measured_provenance": "其中一方不是現場實測或已驗證的量測。",
+      "more_than_one_variable_changed": "改變了不只一個變數，所以無法判斷是哪一個造成差異。",
+      "no_variable_changed": "兩者之間沒有改變任何東西，差異只是雜訊。"
+    },
+    "metric": "指標",
+    "change": "變化",
+    "noise": "Trial 範圍",
+    "overlap": "重疊（可能是雜訊）",
+    "separated": "分開",
+    "perRequest": "每個請求的延遲",
+    "suggestions": "根據證據的建議",
+    "noSuggestions": "沒有規則符合這次比較。",
+    "suggestNote": "建議是依規則推導的假設。請用另一次實測驗證後再採用。",
+    "sugg": {
+      "queueing_serial": "請求在序列處理的伺服器後面排隊",
+      "queueing_saturated": "伺服器看起來已經飽和",
+      "batching_helps": "Batching 有發揮效果",
+      "decode_bound": "延遲主要來自 decode",
+      "errors_present": "有部分請求失敗",
+      "confounded": "這個比較有干擾變數"
+    },
+    "sf": {
+      "evidence": "證據",
+      "cause": "推測原因",
+      "change": "建議修改",
+      "impact": "預期影響",
+      "drawbacks": "缺點",
+      "validation": "如何驗證"
+    },
+    "sweep": "Concurrency 掃描",
+    "sweepSub": "虛線是合成的教學範例，實線是你在相同模型和 max_tokens 下實測的 TTFT p50。",
+    "demoSeries": "排隊範例",
+    "liveSeries": "你的量測",
+    "demoAssumptions": "示範假設",
+    "sweepHint": "用 concurrency 1、2、4 各跑一次 benchmark，就能畫出你自己的線。"
+  },
+  "journal": {
+    "export": "匯出 JSON",
+    "kind": "類型",
+    "engine": "引擎",
+    "hardware": "硬體",
+    "params": "參數",
+    "created": "建立時間",
+    "checksum": "Checksum",
+    "median": "中位數",
+    "notes": "筆記",
+    "notesSub": "你自己的文字。筆記不會改變量測結果。",
+    "note": {
+      "hypothesis": "假設",
+      "observation": "觀察",
+      "decision": "決策",
+      "lesson": "心得"
+    },
+    "save": "儲存筆記",
+    "saved": "已儲存",
+    "report": "產生報告",
+    "reportSub": "只有現場實測或已驗證的量測會被當作結果。示範、失敗、未執行的紀錄會分開列出。",
+    "pick": "要納入的實驗",
+    "reportLang": "報告語言",
+    "decision": "你的決策（由你撰寫）",
+    "decisionPh": "你要部署什麼？證據為什麼支持這個決定？",
+    "generate": "產生報告",
+    "downloadMd": "下載 .md",
+    "claimed": "{{n}} 筆列為結果",
+    "excluded": "{{n}} 筆不列為結果",
+    "tabs": "日誌檢視",
+    "experiments": "實驗（{{n}}）",
+    "runs": "所有執行（{{n}}）",
+    "runsSub": "每一次執行，包含被擋下、未執行和失敗的。",
+    "record": "紀錄",
+    "import": "匯入 JSON…",
+    "importNote": "匯入的檔案會經過檢查（結構 + checksum），並標示為「已驗證匯入」。",
+    "imported": "已匯入 {{id}}",
+    "importFailed": "拒絕匯入",
+    "pickExp": "選一個實驗查看細節和筆記。"
+  }
+}

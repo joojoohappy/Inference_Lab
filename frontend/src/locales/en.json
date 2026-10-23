@@ -1,0 +1,553 @@
+{
+  "provenance": {
+    "LIVE_MEASURED": {
+      "label": "Live measured",
+      "help": "Measured on this machine during this session, by the code shown in the Code Explorer."
+    },
+    "VERIFIED_IMPORTED": {
+      "label": "Verified import",
+      "help": "Imported from a file whose schema and checksum were verified. Measured elsewhere, not on this machine."
+    },
+    "DEMO_SAMPLE": {
+      "label": "Demo sample",
+      "help": "Synthetic numbers for teaching. Never a measurement and never used as evidence."
+    },
+    "NOT_RUN": {
+      "label": "Not run",
+      "help": "This step did not run, usually because the machine lacks a required capability."
+    },
+    "FAILED": {
+      "label": "Failed",
+      "help": "The step ran and failed. The failure is kept as a record; nothing is hidden."
+    }
+  },
+  "status": {
+    "pending": "Pending",
+    "running": "Running",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "blocked": "Needs approval",
+    "not_run": "Not run",
+    "verified": "Verified",
+    "check_failed": "Checks failed",
+    "not_started": "Not started"
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "close": "Close",
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "run": {
+    "command": "Command",
+    "elapsed": "{{s}} s elapsed",
+    "evidence": "Evidence",
+    "isItStuck": "Is it stuck?",
+    "progress": "Progress",
+    "approved": "Approved by you: {{reason}}",
+    "log": "Log",
+    "noLog": "No log lines yet.",
+    "evidenceSeen": "What the lab can see",
+    "possibleCauses": "Possible causes",
+    "nextSteps": "What to try",
+    "why": "Why",
+    "tryNext": "Try next",
+    "errorDetail": "Error detail",
+    "rawOutput": "Raw output (JSON)"
+  },
+  "approval": {
+    "title": "Approval needed",
+    "note": "Nothing runs until you approve. You can copy the command and run it yourself instead.",
+    "approve": "Approve and run",
+    "model_download_uses_network_and_disk": "Downloading a model uses network bandwidth and disk space.",
+    "vllm_uses_gpu_and_pulls_container_image": "vLLM uses the GPU and may pull a large container image.",
+    "large_benchmark": "This benchmark is large and may take a long time."
+  },
+  "source": {
+    "executed": "Executed source",
+    "executedHelp": "This is the real file the lab runs, read from disk. Not an illustration.",
+    "lines": "lines {{a}}–{{b}}",
+    "codeRegion": "Source code of {{path}}",
+    "explain": "Explain this code",
+    "explainLevel": "Explanation level",
+    "selectedLine": "Selected line {{n}}",
+    "modifyTitle": "Want to change it?",
+    "modifyBody": "The explorer is read-only. Edit the file in your own editor, then run the related tests listed for the step.",
+    "view": "View source",
+    "title": "Source code",
+    "openInExplorer": "Open in Code Explorer",
+    "q": {
+      "line": "What does the selected line do?",
+      "why": "Why is it written this way?",
+      "change": "What happens if I change it?",
+      "alternative": "What is a common alternative?",
+      "docs": "Which documentation explains this?"
+    }
+  },
+  "levels": {
+    "simple": "Simple",
+    "logic": "Logic",
+    "design": "Design",
+    "tradeoffs": "Trade-offs"
+  },
+  "tutor": {
+    "source": {
+      "curated": "Curated explanation",
+      "derived": "Derived from your data",
+      "source": "From the code's docstring",
+      "ai": "AI answer (check it)",
+      "none": "No answer found"
+    },
+    "teachMe": "Teach me this",
+    "analogy": "Analogy",
+    "ask": "Ask the tutor",
+    "placeholder": "Ask about this step, the code, or a result…",
+    "askButton": "Ask"
+  },
+  "claim": {
+    "established": "Established fact",
+    "implementation": "How this code does it",
+    "heuristic": "Rule of thumb",
+    "assumption": "Stated assumption",
+    "engineering_heuristic": "Engineering heuristic"
+  },
+  "charts": {
+    "compareAria": "Bar chart comparing baseline and candidate metrics",
+    "baseline": "Baseline",
+    "candidate": "Candidate",
+    "lowerBetter": "lower is better",
+    "higherBetter": "higher is better",
+    "stripAria": "Dot plot of per-request end-to-end latency for each trial",
+    "trial": "Trial {{n}}",
+    "sweepAria": "Line chart of TTFT p50 versus concurrency",
+    "concurrency": "concurrency"
+  },
+  "viz": {
+    "illustrative": "Illustrative, not measured",
+    "kv": {
+      "title": "KV cache: reserve everything vs pages",
+      "sub": "Each row is one request. Cyan is cache actually used; red is memory reserved but wasted. Paged allocation (the PagedAttention idea) hands out small blocks on demand.",
+      "requests": "Requests: {{n}}",
+      "maxLen": "Max length: {{n}} tokens",
+      "contiguous": "Contiguous (reserve max length)",
+      "paged": "Paged (blocks of 8 tokens)",
+      "waste": "Wasted: {{pct}}%",
+      "usedLegend": "used",
+      "wasteLegend": "reserved, unused"
+    },
+    "lt": {
+      "title": "Latency vs throughput",
+      "sub": "A server that handles one request at a time makes waiting clients queue. A batching server serves them together.",
+      "concurrency": "Concurrent clients: {{n}}",
+      "latency": "Latency per request",
+      "throughput": "Throughput",
+      "serial": "One at a time",
+      "batched": "Batched",
+      "assumptions": "Toy model: 40 ms per request alone; each extra request in a batch adds 15% to the step time. Real servers differ; measure yours in the Arena."
+    }
+  },
+  "shell": {
+    "language": "Language",
+    "mode": "Mode",
+    "skip": "Skip to content",
+    "tagline": "Learn it. Run it. Understand it. Improve it.",
+    "nav": "Main areas",
+    "localOnly": "Runs locally on 127.0.0.1. Nothing leaves this machine unless you approve it."
+  },
+  "modes": {
+    "observe": {
+      "label": "Observe",
+      "help": "Watch an approved workflow run step by step, with explanations."
+    },
+    "guided": {
+      "label": "Guided",
+      "help": "You run each step yourself, with hints and checks."
+    },
+    "expert": {
+      "label": "Expert",
+      "help": "Commands and parameters up front, fewer explanations."
+    }
+  },
+  "areas": {
+    "lab": {
+      "name": "The Lab",
+      "desc": "Your machine, your missions, your progress."
+    },
+    "garage": {
+      "name": "Model Garage",
+      "desc": "Inspect models before you download or run them."
+    },
+    "missions": {
+      "name": "Mission Control",
+      "desc": "Seven missions from hardware to a defended decision."
+    },
+    "code": {
+      "name": "Code Explorer",
+      "desc": "Read the exact code that runs each step."
+    },
+    "research": {
+      "name": "Research Archive",
+      "desc": "Primary sources behind the ideas, checked links only."
+    },
+    "arena": {
+      "name": "Experiment Arena",
+      "desc": "Serve, benchmark, and compare with real measurements."
+    },
+    "journal": {
+      "name": "Engineering Journal",
+      "desc": "Every experiment and run, including failures. Reports with provenance."
+    }
+  },
+  "missions": {
+    "number": "Mission {{n}}",
+    "progressAria": "{{v}} of {{r}} required steps verified",
+    "verifiedSteps": "{{v}}/{{r}} steps verified",
+    "scanFirst": "Scan your machine first (Mission 01) so the lab knows which paths are available.",
+    "lockNote": "A mission unlocks when its prerequisites are verified by checks, not by clicking through.",
+    "notFound": "Mission not found.",
+    "all": "← All missions",
+    "prereq": "Complete first: {{list}}",
+    "objectives": "Objectives",
+    "evidence": "Completion evidence",
+    "observeIntro": "Observe mode: the lab runs the steps that need no approval and explains each result. Steps that need approval or missing hardware are skipped and shown as such.",
+    "observeRun": "Run the approved workflow",
+    "observeRunning": "Running…",
+    "optionalExperiments": "Optional experiments",
+    "step": "Step {{n}}",
+    "optional": "Optional",
+    "what": "What",
+    "why": "Why",
+    "whatWhy": "What and why",
+    "missingCaps": "Not available on this machine (needs: {{caps}}). It will be recorded as NOT RUN.",
+    "willRun": "This will run",
+    "expected": "Expected",
+    "approveRun": "Review and approve",
+    "running": "Running…",
+    "runAgain": "Run again",
+    "run": "Run",
+    "runWithoutApproval": "Try without approval (it will be blocked)",
+    "validation": "Validation",
+    "validationNote": "Checks are deterministic rules on the run's real output. The tutor never decides completion.",
+    "lastAttempt": "Last attempt: {{status}}",
+    "reproduceAlternatives": "Reproduce it yourself / alternatives",
+    "reproduce": "Run it yourself in a terminal",
+    "alternatives": "Alternatives",
+    "failure": "If it fails"
+  },
+  "missionState": {
+    "locked": "Locked",
+    "available": "Available",
+    "in_progress": "In progress",
+    "complete": "Complete",
+    "not_available": "Not available here"
+  },
+  "mastery": {
+    "none": "Not started",
+    "started": "Started",
+    "practiced": "Practiced",
+    "independent": "Independent"
+  },
+  "stepStatus": {
+    "verified": "Verified",
+    "pending": "Not verified yet",
+    "not_available": "Not available"
+  },
+  "checks": {
+    "passed": "passed",
+    "failed": "failed",
+    "missing": "missing"
+  },
+  "caps": {
+    "cpu_inference": "CPU inference (torch + transformers)",
+    "nvidia_gpu": "NVIDIA GPU",
+    "cuda_torch": "CUDA-enabled PyTorch",
+    "docker": "Docker daemon",
+    "vllm_docker": "vLLM via Docker + GPU",
+    "vllm_python": "vLLM Python package",
+    "hub_access": "Hugging Face Hub reachable"
+  },
+  "quiz": {
+    "check": "Check answer",
+    "alreadyCorrect": "Already answered correctly",
+    "correct": "Correct.",
+    "tryAgain": "Not quite. Try again."
+  },
+  "hints": {
+    "n": "Hint {{n}}",
+    "first": "Show a hint",
+    "more": "Another hint ({{left}} left)"
+  },
+  "challenge": {
+    "label": "Challenge",
+    "title": "Do it without the walkthrough",
+    "done": "Challenge verified",
+    "noHints": "No hints here. The same checks decide whether you did it.",
+    "submit": "Run challenge"
+  },
+  "lab": {
+    "machine": "Your machine",
+    "rescan": "Rescan",
+    "scan": "Scan my machine",
+    "machineIntro": "Start here. The scan runs fixed, read-only commands (nvidia-smi, docker version, Python imports) and records what it finds.",
+    "threads": "{{n}} threads",
+    "noGpu": "No NVIDIA GPU found",
+    "noGpuHelp": "That's fine: every core mission has a CPU path. GPU steps are marked NOT RUN.",
+    "dockerNoDaemon": "Client only, daemon not running",
+    "notFound": "Not found",
+    "welcome": "Welcome to Inference Lab",
+    "welcomeSub": "Run a real model on your own hardware, measure it honestly, read the code that did it, and decide what to change.",
+    "continue": "Continue next mission",
+    "allMissions": "All missions",
+    "missions": "Missions",
+    "skills": "Skills",
+    "skillsSub": "Earned from verified steps, not from clicks.",
+    "noSkills": "No skills yet. Verify a step to earn one.",
+    "recent": "Recent results",
+    "noResults": "No experiments yet.",
+    "activity": "Activity",
+    "noRuns": "Nothing has run yet."
+  },
+  "skills": {
+    "m01-meet-your-machine": "Read your hardware's limits",
+    "m02-find-your-model": "Inspect a model safely",
+    "m03-wake-it-up": "Run and time local inference",
+    "m04-build-your-server": "Serve a model over HTTP",
+    "m05-put-it-to-the-test": "Benchmark with honest methodology",
+    "m06-hunt-the-bottleneck": "Change one variable and compare",
+    "m07-defend-your-decision": "Defend a decision with evidence"
+  },
+  "kinds": {
+    "hardware": "Hardware scan",
+    "inference": "Inference",
+    "benchmark": "Benchmark"
+  },
+  "garage": {
+    "metadata": "Metadata",
+    "f": {
+      "id": "Model ID",
+      "source": "Source",
+      "revision": "Revision",
+      "task": "Task",
+      "arch": "Architecture",
+      "params": "Parameters",
+      "license": "License",
+      "gated": "Gated",
+      "formats": "Weight formats",
+      "size": "Size",
+      "tokenizer": "Tokenizer",
+      "chat": "Chat template",
+      "remoteCode": "Needs remote code",
+      "frameworks": "Framework support"
+    },
+    "source": {
+      "huggingface_hub_api": "Hugging Face Hub API",
+      "local_files": "Local files"
+    },
+    "unknown": "unknown",
+    "pickleOnly": "pickle only (refused)",
+    "downloadSize": "download {{size}}",
+    "remoteCodeYes": "yes (refused)",
+    "vllmCheck": "check vLLM's supported models",
+    "memory": "Memory estimate",
+    "estimate": "Estimate",
+    "weights": "Weights",
+    "kv": "KV cache",
+    "total": "Total",
+    "noEstimate": "Not enough metadata to estimate memory.",
+    "assumptions": "Assumptions",
+    "compat": "Compatibility with this machine",
+    "verdict": {
+      "fits_gpu": "Fits on the GPU",
+      "cpu_only": "CPU only",
+      "too_large": "Too large for this machine",
+      "unknown": "Unknown"
+    },
+    "paths": "Possible paths",
+    "path": {
+      "gpu_transformers": "GPU + Transformers",
+      "gpu_vllm": "GPU + vLLM",
+      "cpu_transformers": "CPU + Transformers"
+    },
+    "card": "Model card",
+    "twoWorkflows": "Two workflows: inspect a Hub model by ID or URL (metadata only, nothing downloaded), or inspect a model already on disk.",
+    "inspectTitle": "Inspect a model",
+    "inspectSub": "Paste a Hugging Face model ID or https://huggingface.co/… URL.",
+    "inputLabel": "Model ID or URL",
+    "inspectHub": "Inspect on Hub",
+    "inspectLocal": "Inspect local",
+    "invalidInput": "Invalid input",
+    "download": "Download (needs approval)",
+    "downloadRefused": "Download refused: {{reason}}",
+    "modelChanged": "Note: showing a new model; the previous one was {{prev}}.",
+    "catalog": "Starter models",
+    "catalogSub": "Small models that run on a CPU. The tiny one is built locally and needs no network.",
+    "size": {
+      "tiny": "tiny",
+      "small": "small"
+    },
+    "build": "Build locally",
+    "local": "Models on this machine",
+    "noLocal": "No local models yet. Build the tiny model to start.",
+    "tryInference": "Try inference",
+    "model": "Model",
+    "prompt": "Prompt",
+    "generate": "Generate",
+    "expectedDisk": "Expected disk use",
+    "files": "Files",
+    "inputTokens": "Input: {{n}} tokens",
+    "outputTokens": "Output: {{n}} tokens",
+    "randomNote": "This model has random weights, so the text is gibberish. The timings and tokens are still real."
+  },
+  "code": {
+    "files": "Files",
+    "filter": "Filter",
+    "pick": "Pick a file on the left, or use View source from a mission step.",
+    "legendTitle": "What you are looking at",
+    "illustrative": "Illustrative",
+    "suggested": "Suggested change",
+    "legendExecuted": "real files from this repository; the code that runs.",
+    "legendIllustrative": "simplified snippets in explanations; labelled wherever they appear.",
+    "legendSuggested": "changes proposed by the tutor; never applied automatically.",
+    "readOnly": "Read-only. Secrets, .env files, .git and dependencies are not served."
+  },
+  "research": {
+    "intro": "Every record links to a primary source and says how it was checked. If a source could not be verified, it is labelled.",
+    "filter": "Filter by concept",
+    "all": "All",
+    "sources": "Sources ({{n}})",
+    "none": "No sources for this concept.",
+    "pick": "Pick a source to read the summary.",
+    "kind": {
+      "paper": "Paper",
+      "documentation": "Documentation",
+      "book_chapter": "Book chapter",
+      "benchmark": "Benchmark"
+    },
+    "verification": {
+      "fetched": "Checked",
+      "not_fetched": "Not verified"
+    },
+    "checkedOn": "Fetched on {{date}}; checked: {{fields}}",
+    "section": {
+      "beginner": "For beginners",
+      "engineering": "Engineering view",
+      "contributions": "Key contributions",
+      "practical": "Why it matters here",
+      "limitations": "Limitations"
+    },
+    "concepts": "Concepts",
+    "missions": "Related missions",
+    "visuals": "Interactive visuals"
+  },
+  "arena": {
+    "server": "Server",
+    "healthy": "Healthy",
+    "noServer": "No server",
+    "serverSub": "Start an OpenAI-compatible server bound to 127.0.0.1. The mini server runs on CPU; vLLM needs a GPU and Docker.",
+    "engine": "Engine",
+    "engineMini": "Mini server (CPU, Transformers)",
+    "engineVllm": "vLLM (GPU, Docker)",
+    "start": "Start",
+    "health": "Check health",
+    "stop": "Stop",
+    "bench": "Benchmark",
+    "benchSub": "Closed-loop load: each virtual client sends its next request when the previous one finishes. Warm-up requests are discarded.",
+    "p": {
+      "concurrency": "concurrency",
+      "max_tokens": "max_tokens",
+      "num_requests": "num_requests",
+      "warmup_requests": "warmup_requests",
+      "trials": "trials",
+      "hypothesis": "Hypothesis (optional)"
+    },
+    "hypothesisPh": "e.g. TTFT will rise with concurrency because the mini server is serial",
+    "runBench": "Run benchmark",
+    "benchNote": "Needs a healthy server. Results are saved as LIVE MEASURED experiments.",
+    "compare": "Compare two experiments",
+    "compareSub": "A fair comparison changes one variable. The lab checks this for you.",
+    "needTwo": "Run at least two benchmarks to compare.",
+    "compareBtn": "Compare",
+    "comparable": "Comparable",
+    "notComparable": "Not a clean comparison",
+    "differences": "What changed",
+    "warn": {
+      "non_measured_provenance": "One side is not a live or verified measurement.",
+      "more_than_one_variable_changed": "More than one variable changed, so you cannot tell which one caused the difference.",
+      "no_variable_changed": "Nothing changed between the two; differences are noise."
+    },
+    "metric": "Metric",
+    "change": "Change",
+    "noise": "Trial ranges",
+    "overlap": "overlap (may be noise)",
+    "separated": "separated",
+    "perRequest": "per-request latency",
+    "suggestions": "Suggestions from the evidence",
+    "noSuggestions": "No rule matched this comparison.",
+    "suggestNote": "Suggestions are rule-based hypotheses. Validate them with another measured run before you rely on them.",
+    "sugg": {
+      "queueing_serial": "Requests are queueing behind a serial server",
+      "queueing_saturated": "The server looks saturated",
+      "batching_helps": "Batching is paying off",
+      "decode_bound": "Latency is dominated by decoding",
+      "errors_present": "Some requests failed",
+      "confounded": "The comparison is confounded"
+    },
+    "sf": {
+      "evidence": "Evidence",
+      "cause": "Suspected cause",
+      "change": "Proposed change",
+      "impact": "Expected impact",
+      "drawbacks": "Drawbacks",
+      "validation": "How to validate"
+    },
+    "sweep": "Concurrency sweep",
+    "sweepSub": "The dashed line is a synthetic teaching example. The solid line is your measured TTFT p50 for the same model and max_tokens.",
+    "demoSeries": "Queueing example",
+    "liveSeries": "Your measurements",
+    "demoAssumptions": "Demo assumptions",
+    "sweepHint": "Run benchmarks at concurrency 1, 2 and 4 to draw your own line."
+  },
+  "journal": {
+    "export": "Export JSON",
+    "kind": "Kind",
+    "engine": "Engine",
+    "hardware": "Hardware",
+    "params": "Parameters",
+    "created": "Created",
+    "checksum": "Checksum",
+    "median": "median",
+    "notes": "Notes",
+    "notesSub": "Your words. Notes never change the measured result.",
+    "note": {
+      "hypothesis": "Hypothesis",
+      "observation": "Observation",
+      "decision": "Decision",
+      "lesson": "Lesson"
+    },
+    "save": "Save notes",
+    "saved": "Saved",
+    "report": "Generate a report",
+    "reportSub": "Only live or verified measurements are claimed as results. Demo, failed and not-run records are listed separately.",
+    "pick": "Experiments to include",
+    "reportLang": "Report language",
+    "decision": "Your decision (written by you)",
+    "decisionPh": "What will you deploy, and why does the evidence support it?",
+    "generate": "Generate report",
+    "downloadMd": "Download .md",
+    "claimed": "{{n}} claimed as results",
+    "excluded": "{{n}} excluded from claims",
+    "tabs": "Journal views",
+    "experiments": "Experiments ({{n}})",
+    "runs": "All runs ({{n}})",
+    "runsSub": "Every run, including blocked, not-run and failed ones.",
+    "record": "record",
+    "import": "Import JSON…",
+    "importNote": "Imports are checked (schema + checksum) and labelled VERIFIED IMPORTED.",
+    "imported": "Imported {{id}}",
+    "importFailed": "Import refused",
+    "pickExp": "Pick an experiment to see its details and notes."
+  }
+}
