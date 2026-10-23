@@ -1,0 +1,96 @@
+id: m05-put-it-to-the-test
+number: 5
+version: 1.0.0
+title: {en: "Put It to the Test", zh-TW: "實際測試它"}
+tagline:
+  en: "Numbers, not feelings. Measure latency and throughput the way engineers do."
+  zh-TW: "看數字，不看感覺。用工程師的方式量測延遲與吞吐量。"
+objectives:
+  - {en: "Run a benchmark with warm-up and repeated trials.", zh-TW: "執行包含暖機與重複多輪的 benchmark。"}
+  - {en: "Explain TTFT, TPOT, P50, P95, concurrency and throughput.", zh-TW: "說明 TTFT、TPOT、P50、P95、並行數與吞吐量。"}
+  - {en: "Read run-to-run spread before trusting a number.", zh-TW: "在相信一個數字之前，先看每次執行之間的差異。"}
+prerequisites: [m04-build-your-server]
+concepts: [ttft, tpot, percentiles, concurrency, benchmark-methodology, latency-throughput]
+references: [mlperf-inference-2020, vllm-docs]
+completion_evidence:
+  en: "A LIVE_MEASURED benchmark record with 3 trials and a measured TTFT P50 > 0."
+  zh-TW: "一筆 LIVE_MEASURED benchmark 紀錄，包含 3 輪，且實測 TTFT P50 > 0。"
+steps:
+  - id: s1-metrics-check
+    title: {en: "Knowledge check: TTFT or TPOT?", zh-TW: "觀念檢查：TTFT 還是 TPOT？"}
+    what: {en: "Match the metric to what a user feels.", zh-TW: "把指標對應到使用者的感受。"}
+    why: {en: "Different products care about different metrics.", zh-TW: "不同的產品在意不同的指標。"}
+    concept: ttft
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "Which wait happens before anything appears on screen?", zh-TW: "哪一種等待發生在畫面上出現任何東西之前？"}
+    quiz:
+      question:
+        en: "A chat user complains 'it takes forever before it starts typing'. Which metric describes that?"
+        zh-TW: "聊天使用者抱怨「它要等好久才開始打字」。哪個指標描述的是這件事？"
+      options:
+        - {en: "TPOT (time per output token)", zh-TW: "TPOT（每個輸出 token 的時間）"}
+        - {en: "TTFT (time to first token)", zh-TW: "TTFT（第一個 token 的時間）"}
+        - {en: "Output throughput (tokens/s across all users)", zh-TW: "輸出吞吐量（所有使用者加總的 tokens/s）"}
+      answer: 1
+      explanation:
+        en: "TTFT covers queueing plus processing the prompt (prefill) before the first token. TPOT is the typing speed after that."
+        zh-TW: "TTFT 包含排隊時間，以及在第一個 token 出現前處理提示詞（prefill）的時間。TPOT 則是之後的「打字速度」。"
+  - id: s2-baseline
+    title: {en: "Measure a baseline", zh-TW: "量測基準（baseline）"}
+    what:
+      en: "Sends 1 warm-up request (discarded), then 3 trials of 8 streamed requests at concurrency 1, with a fixed output length of 16 tokens. Server memory and CPU are sampled during the run."
+      zh-TW: "先送 1 個暖機請求（結果丟棄），再以並行數 1 跑 3 輪、每輪 8 個串流請求，輸出長度固定為 16 個 token。執行期間會取樣伺服器的記憶體與 CPU。"
+    why:
+      en: "A baseline is the reference every later change is compared with. Repeating trials shows how much the number moves by itself."
+      zh-TW: "基準是之後每個改變都要拿來比較的參考點。重複多輪可以看出數字本身會自己晃動多少。"
+    concept: benchmark-methodology
+    action: {id: bench.run, params: {concurrency: 1, max_tokens: 16, num_requests: 8, warmup_requests: 1, trials: 3}, editable: [max_tokens, num_requests]}
+    expected:
+      en: "Per-trial TTFT, TPOT and end-to-end percentiles, throughput, and min/max across trials."
+      zh-TW: "每一輪的 TTFT、TPOT、端到端延遲百分位數與吞吐量，以及各輪的最小值與最大值。"
+    checks:
+      - {id: ran, description: {en: "Benchmark executed", zh-TW: "benchmark 已執行"}, path: run.status, op: eq, value: succeeded}
+      - {id: live, description: {en: "Live measurement", zh-TW: "即時實測"}, path: run.provenance, op: eq, value: LIVE_MEASURED}
+      - {id: trials, description: {en: "Three trials recorded", zh-TW: "已記錄 3 輪"}, path: result.trials, op: len_gte, value: 3}
+      - {id: ttft, description: {en: "TTFT measured", zh-TW: "已量到 TTFT"}, path: result.aggregate.ttft_p50_ms.median, op: gt, value: 0}
+      - {id: errors, description: {en: "No failed requests", zh-TW: "沒有失敗的請求"}, path: result.aggregate.error_rate.max, op: eq, value: 0}
+      - {id: recorded, description: {en: "Experiment record saved", zh-TW: "已儲存實驗紀錄"}, path: run.experiment_id, op: exists}
+    failure: {en: "Fails without a healthy server, or if every request errors.", zh-TW: "沒有健康的伺服器，或每個請求都出錯時會失敗。"}
+    hints:
+      - {en: "Mission 04 must have a running server.", zh-TW: "任務 04 必須有一台正在執行的伺服器。"}
+      - {en: "Look at min and max of each metric: if they are far apart, the machine is noisy.", zh-TW: "看看每個指標的最小值和最大值：如果差很多，代表這台機器的雜訊很大。"}
+    sources:
+      - {file: inference_lab/bench/loadgen.py, symbol: _trial}
+      - {file: inference_lab/bench/metrics.py, symbol: RequestSample}
+      - {file: inference_lab/bench/metrics.py, symbol: aggregate_trials}
+    alternatives:
+      en: "vLLM ships its own benchmark scripts (benchmarks/benchmark_serving.py). MLPerf Inference defines formal scenarios for comparable results."
+      zh-TW: "vLLM 自帶 benchmark 腳本（benchmarks/benchmark_serving.py）。MLPerf Inference 則定義了正式的情境，讓結果可以互相比較。"
+    reproduce:
+      en: "inference-lab bench --concurrency 1 --max-tokens 16 --num-requests 8 --warmup 1 --trials 3"
+      zh-TW: "inference-lab bench --concurrency 1 --max-tokens 16 --num-requests 8 --warmup 1 --trials 3"
+  - id: s3-p95-check
+    title: {en: "Knowledge check: P95", zh-TW: "觀念檢查：P95"}
+    what: {en: "Interpret a percentile.", zh-TW: "解讀百分位數。"}
+    why: {en: "Averages hide the slow requests users remember.", zh-TW: "平均值會把使用者記得的那些慢請求藏起來。"}
+    concept: percentiles
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "Sort all latencies and walk 95% of the way up the list.", zh-TW: "把所有延遲排序，然後往上走到清單的 95% 位置。"}
+    quiz:
+      question:
+        en: "E2E P95 = 800 ms means:"
+        zh-TW: "E2E P95 = 800 ms 的意思是："
+      options:
+        - {en: "The average request took 800 ms", zh-TW: "平均每個請求花了 800 ms"}
+        - {en: "95% of requests finished in 800 ms or less; 5% were slower", zh-TW: "95% 的請求在 800 ms 以內完成；有 5% 比較慢"}
+        - {en: "95 requests took 800 ms", zh-TW: "有 95 個請求花了 800 ms"}
+      answer: 1
+      explanation:
+        en: "Percentiles describe the distribution. P50 is the typical request; P95 shows the tail that a noticeable share of users hit."
+        zh-TW: "百分位數描述的是分布。P50 是典型的請求；P95 則呈現了有一定比例使用者會碰到的長尾。"
+optional_experiments:
+  - {en: "Run the baseline twice and compare: how different are two identical runs?", zh-TW: "把基準跑兩次並比較：兩次完全相同的執行差了多少？"}

@@ -1,0 +1,127 @@
+id: m03-wake-it-up
+number: 3
+version: 1.0.0
+title: {en: "Wake It Up", zh-TW: "喚醒它"}
+tagline:
+  en: "Run a real model on your own machine and watch text become tokens and tokens become text."
+  zh-TW: "在自己的電腦上執行真正的模型，看文字變成 token，再看 token 變回文字。"
+objectives:
+  - {en: "Load a model with Transformers and run real inference.", zh-TW: "用 Transformers 載入模型並執行真正的推論。"}
+  - {en: "Inspect input token ids, output token ids and decoded text.", zh-TW: "檢視輸入 token id、輸出 token id 與解碼後的文字。"}
+  - {en: "Measure load time, time to first token and tokens per second.", zh-TW: "量測載入時間、第一個 token 的時間（TTFT）與每秒 token 數。"}
+prerequisites: [m02-find-your-model]
+concepts: [inference-pipeline, tokenizer, greedy-decoding, ttft]
+references: [hf-transformers-docs, vaswani-2017]
+completion_evidence:
+  en: "A LIVE_MEASURED inference record with input and output tokens and a measured TTFT."
+  zh-TW: "一筆 LIVE_MEASURED 推論紀錄，包含輸入與輸出 token，以及實測的 TTFT。"
+steps:
+  - id: s1-prepare
+    title: {en: "Build the teaching model", zh-TW: "建立教學模型"}
+    what:
+      en: "Trains a tiny tokenizer on a fixed built-in text and creates a 4-layer GPT-2-shaped network with random weights (seed 0). Takes a few seconds on CPU. No download."
+      zh-TW: "用固定的內建文字訓練一個很小的 tokenizer，並建立一個 4 層、GPT-2 結構、權重隨機（seed 0）的網路。在 CPU 上只要幾秒，不需要下載。"
+    why:
+      en: "It lets everyone, even offline and without a GPU, run every step of real inference."
+      zh-TW: "這讓每個人即使離線、沒有 GPU，也能跑完真正推論的每一個步驟。"
+    concept: inference-pipeline
+    action: {id: model.prepare_tiny}
+    expected:
+      en: "A folder with config.json, model.safetensors and tokenizer files."
+      zh-TW: "一個包含 config.json、model.safetensors 和 tokenizer 檔案的資料夾。"
+    checks:
+      - {id: ran, description: {en: "Model folder exists", zh-TW: "模型資料夾已存在"}, path: run.status, op: eq, value: succeeded}
+      - {id: path, description: {en: "Path recorded", zh-TW: "已記錄路徑"}, path: result.path, op: exists}
+    failure:
+      en: "Fails if PyTorch or Transformers is not installed (pip install -e '.[inference]')."
+      zh-TW: "沒有安裝 PyTorch 或 Transformers 時會失敗（pip install -e '.[inference]'）。"
+    hints:
+      - {en: "Hardware scan → python_ml shows whether torch and transformers are importable.", zh-TW: "硬體掃描 → python_ml 會顯示 torch 和 transformers 能不能匯入。"}
+    sources:
+      - {file: inference_lab/inference.py, symbol: build_tiny_model}
+    reproduce:
+      en: "inference-lab prepare-tiny"
+      zh-TW: "inference-lab prepare-tiny"
+  - id: s2-infer
+    title: {en: "Run your first inference", zh-TW: "執行你的第一次推論"}
+    what:
+      en: "Loads the model with local_files_only=True, turns your prompt into token ids, runs greedy generation, timestamps every new token, and decodes the result."
+      zh-TW: "以 local_files_only=True 載入模型，把提示詞轉成 token id，執行 greedy 生成，替每個新 token 記錄時間，最後把結果解碼。"
+    why:
+      en: "This is inference in its simplest honest form: tokenize → forward passes → pick next token → decode."
+      zh-TW: "這是最單純、也最真實的推論：tokenize → 前向傳遞 → 選出下一個 token → 解碼。"
+    concept: greedy-decoding
+    action: {id: inference.run, params: {model: lab/tiny-random, prompt: "The KV cache stores", max_new_tokens: 16}, editable: [prompt, max_new_tokens]}
+    expected:
+      en: "Your prompt split into tokens, some generated tokens, and timings. With random weights the text is nonsense (often the same token repeated). That is correct behaviour."
+      zh-TW: "你的提示詞被切成 token、生成了一些 token，還有時間數據。因為權重是隨機的，文字會是亂碼（常常是同一個 token 一直重複），這是正確的行為。"
+    checks:
+      - {id: ran, description: {en: "Inference executed", zh-TW: "推論已執行"}, path: run.status, op: eq, value: succeeded}
+      - {id: live, description: {en: "Live measurement, not a demo", zh-TW: "是即時實測，不是示範資料"}, path: result.provenance, op: eq, value: LIVE_MEASURED}
+      - {id: in, description: {en: "Prompt was tokenized", zh-TW: "提示詞已被 tokenize"}, path: result.input.count, op: gte, value: 1}
+      - {id: out, description: {en: "At least one token generated", zh-TW: "至少生成 1 個 token"}, path: result.output.count, op: gte, value: 1}
+      - {id: ttft, description: {en: "Time to first token was measured", zh-TW: "已量到第一個 token 的時間"}, path: result.timing.ttft_ms, op: gt, value: 0}
+    failure:
+      en: "Fails if the model is not on disk or the prompt is empty or over 4000 characters."
+      zh-TW: "模型不在磁碟上，或提示詞是空的、超過 4000 字元時會失敗。"
+    hints:
+      - {en: "Compare input.tokens with your prompt: where did the spaces go?", zh-TW: "比較 input.tokens 和你的提示詞：空白跑到哪裡去了？"}
+      - {en: "'Ġ' marks a token that starts with a space in byte-level BPE.", zh-TW: "在 byte-level BPE 裡，「Ġ」代表這個 token 以空白開頭。"}
+      - {en: "Greedy decoding always picks the highest-scoring token, so a random model often gets stuck repeating one.", zh-TW: "greedy 解碼永遠挑分數最高的 token，所以隨機模型常會卡在同一個 token 一直重複。"}
+    sources:
+      - {file: inference_lab/inference.py, symbol: run_inference}
+      - {file: inference_lab/inference.py, symbol: _TokenClock}
+    alternatives:
+      en: "transformers.pipeline('text-generation') does the same in one line but hides the steps you are learning here."
+      zh-TW: "transformers.pipeline('text-generation') 一行就能做到，但會把你在這裡學的步驟藏起來。"
+    reproduce:
+      en: "inference-lab infer --prompt \"The KV cache stores\" --max-new-tokens 16"
+      zh-TW: "inference-lab infer --prompt \"The KV cache stores\" --max-new-tokens 16"
+  - id: s3-why-gibberish
+    title: {en: "Knowledge check: why gibberish?", zh-TW: "觀念檢查：為什麼是亂碼？"}
+    what: {en: "Explain what you just observed.", zh-TW: "解釋你剛剛觀察到的現象。"}
+    why: {en: "Separating 'the pipeline works' from 'the model is good' is a core skill.", zh-TW: "把「流程能跑」和「模型很好」分開來看，是一項核心能力。"}
+    concept: inference-pipeline
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "What makes a model 'know' anything?", zh-TW: "是什麼讓模型「知道」東西？"}
+    quiz:
+      question:
+        en: "The tiny model's output is nonsense, but every check passed. Why?"
+        zh-TW: "tiny 模型的輸出是亂碼，但所有檢查都通過了。為什麼？"
+      options:
+        - {en: "The tokenizer is broken", zh-TW: "tokenizer 壞掉了"}
+        - {en: "Its weights are random: the pipeline ran correctly, but the model never learned anything", zh-TW: "它的權重是隨機的：流程正確執行了，但模型從沒學過任何東西"}
+        - {en: "The CPU is too slow to produce good text", zh-TW: "CPU 太慢，產生不出好的文字"}
+      answer: 1
+      explanation:
+        en: "Quality comes from trained weights. The checks verify that inference executed and was measured, not that the answer is good. A real pretrained model uses exactly the same code path."
+        zh-TW: "品質來自訓練過的權重。這些檢查驗證的是推論有執行、有被量測，而不是答案好不好。真正預訓練過的模型走的是完全相同的程式路徑。"
+  - id: s4-real-model
+    title: {en: "Optional: a real pretrained model", zh-TW: "選做：真正的預訓練模型"}
+    what:
+      en: "After you approve a download in the Model Garage, run the same inference on a real small model."
+      zh-TW: "在模型車庫同意下載之後，用一個真正的小模型跑同樣的推論。"
+    why: {en: "Same code, trained weights: now the text makes sense.", zh-TW: "同樣的程式碼、訓練過的權重：這次文字就有意義了。"}
+    concept: inference-pipeline
+    action: {id: inference.run, params: {model: HuggingFaceTB/SmolLM2-135M-Instruct, prompt: "The capital of France is", max_new_tokens: 16}, editable: [model, prompt, max_new_tokens]}
+    optional: true
+    requires_capabilities: [hub_access]
+    expected: {en: "Readable text and slower timings than the tiny model.", zh-TW: "可讀的文字，以及比 tiny 模型慢的時間數據。"}
+    checks:
+      - {id: ran, description: {en: "Inference executed", zh-TW: "推論已執行"}, path: run.status, op: eq, value: succeeded}
+      - {id: out, description: {en: "Tokens generated", zh-TW: "已生成 token"}, path: result.output.count, op: gte, value: 1}
+    failure: {en: "Fails with model_not_local until the download is approved and finished.", zh-TW: "在同意下載並完成之前，會以 model_not_local 失敗。"}
+    hints:
+      - {en: "Model Garage → Inspect → Approve download.", zh-TW: "模型車庫 → 檢視 → 同意下載。"}
+challenge:
+  prompt:
+    en: "Without hints: make the model generate exactly 10 new tokens (or fewer only if it stops early on its end-of-text token)."
+    zh-TW: "不看提示：讓模型剛好生成 10 個新 token（只有在它提早產生結束 token 時才可以少於 10 個）。"
+  action: {id: inference.run, params: {model: lab/tiny-random, prompt: "Hello", max_new_tokens: 24}, editable: [prompt, max_new_tokens]}
+  checks:
+    - {id: limit, description: {en: "max_new_tokens set to 10", zh-TW: "max_new_tokens 設為 10"}, path: result.decoding.max_new_tokens, op: eq, value: 10}
+    - {id: count, description: {en: "No more than 10 tokens", zh-TW: "不超過 10 個 token"}, path: result.output.count, op: lte, value: 10}
+optional_experiments:
+  - {en: "Double max_new_tokens and check whether total generation time roughly doubles.", zh-TW: "把 max_new_tokens 加倍，看看總生成時間是否大約也加倍。"}

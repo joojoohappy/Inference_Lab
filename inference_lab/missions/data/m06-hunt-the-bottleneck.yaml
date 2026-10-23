@@ -1,0 +1,94 @@
+id: m06-hunt-the-bottleneck
+number: 6
+version: 1.0.0
+title: {en: "Hunt the Bottleneck", zh-TW: "追捕瓶頸"}
+tagline:
+  en: "Form a hypothesis, change one thing, measure again. That is the whole method."
+  zh-TW: "提出假設、只改一件事、再量一次。方法就這麼簡單。"
+objectives:
+  - {en: "Write a falsifiable hypothesis before running an experiment.", zh-TW: "在執行實驗前，寫下一個可以被推翻的假設。"}
+  - {en: "Change exactly one primary variable compared with the baseline.", zh-TW: "相對於基準，只改變一個主要變因。"}
+  - {en: "Use the comparison to accept or reject the hypothesis, separating signal from noise.", zh-TW: "用比較結果接受或推翻假設，並分辨訊號與雜訊。"}
+prerequisites: [m05-put-it-to-the-test]
+concepts: [bottleneck-method, concurrency, batching, latency-throughput, kv-cache]
+references: [kwon-2023-pagedattention, pope-2022-scaling, mlperf-inference-2020]
+completion_evidence:
+  en: "A second LIVE_MEASURED benchmark that differs from the baseline in exactly one variable, and a comparison that verified this."
+  zh-TW: "第二筆 LIVE_MEASURED benchmark，與基準之間只有一個變因不同，並且有比較結果驗證了這一點。"
+steps:
+  - id: s1-candidate
+    title: {en: "Change one variable and measure", zh-TW: "改變一個變因並量測"}
+    what:
+      en: "Re-runs the Mission 05 benchmark with concurrency 4 instead of 1. Everything else stays identical. Write your hypothesis first: what will happen to TTFT and throughput?"
+      zh-TW: "以並行數 4 取代 1，重新執行任務 05 的 benchmark，其他條件完全相同。請先寫下你的假設：TTFT 和吞吐量會怎麼變？"
+    why:
+      en: "If you change two things, you cannot tell which one caused the difference."
+      zh-TW: "如果同時改了兩件事，你就無法知道是哪一件造成了差異。"
+    concept: bottleneck-method
+    action: {id: bench.run, params: {concurrency: 4, max_tokens: 16, num_requests: 8, warmup_requests: 1, trials: 3, hypothesis: ""}, editable: [concurrency, hypothesis]}
+    expected:
+      en: "A second benchmark record. On the mini server (one request at a time), expect TTFT to rise sharply while throughput stays about the same."
+      zh-TW: "第二筆 benchmark 紀錄。在 mini server（一次只處理一個請求）上，預期 TTFT 會明顯上升，而吞吐量大致不變。"
+    checks:
+      - {id: ran, description: {en: "Benchmark executed", zh-TW: "benchmark 已執行"}, path: run.status, op: eq, value: succeeded}
+      - {id: live, description: {en: "Live measurement", zh-TW: "即時實測"}, path: run.provenance, op: eq, value: LIVE_MEASURED}
+      - {id: changed, description: {en: "Concurrency differs from the baseline value 1", zh-TW: "並行數與基準值 1 不同"}, path: result.config.concurrency, op: gt, value: 1}
+      - {id: recorded, description: {en: "Experiment record saved", zh-TW: "已儲存實驗紀錄"}, path: run.experiment_id, op: exists}
+    failure: {en: "Same as Mission 05: needs a healthy server.", zh-TW: "和任務 05 一樣：需要一台健康的伺服器。"}
+    hints:
+      - {en: "A good hypothesis names a metric, a direction and a reason.", zh-TW: "好的假設會說出指標、變化方向和原因。"}
+      - {en: "Example: 'TTFT P50 will rise about 4× because requests queue behind a single generator; throughput will not change.'", zh-TW: "例如：「TTFT P50 會上升約 4 倍，因為請求都在單一生成器後面排隊；吞吐量不會改變。」"}
+    sources:
+      - {file: inference_lab/serving/mini_server.py, symbol: create_app}
+      - {file: inference_lab/bench/loadgen.py, symbol: _trial}
+    reproduce:
+      en: "inference-lab bench --concurrency 4 --max-tokens 16 --num-requests 8 --warmup 1 --trials 3 --hypothesis \"...\""
+      zh-TW: "inference-lab bench --concurrency 4 --max-tokens 16 --num-requests 8 --warmup 1 --trials 3 --hypothesis \"...\""
+  - id: s2-compare
+    title: {en: "Compare against the baseline", zh-TW: "與基準比較"}
+    what:
+      en: "Compares the two records: lists every variable that differs (model, revision, hardware, engine, workload) and the change in each metric, flagging changes that fall inside run-to-run noise."
+      zh-TW: "比較兩筆紀錄：列出所有不同的變因（模型、版本、硬體、引擎、工作負載），以及每個指標的變化，並標出落在執行間雜訊範圍內的變化。"
+    why:
+      en: "A comparison is only fair when exactly one variable changed."
+      zh-TW: "只有在剛好改變一個變因時，比較才公平。"
+    concept: bottleneck-method
+    action: {id: experiment.compare, params: {baseline_id: "${m05-put-it-to-the-test:s2-baseline}", candidate_id: "${m06-hunt-the-bottleneck:s1-candidate}"}, editable: [baseline_id, candidate_id]}
+    expected:
+      en: "differences = [workload.concurrency] and comparable = true."
+      zh-TW: "differences = [workload.concurrency]，且 comparable = true。"
+    checks:
+      - {id: ran, description: {en: "Comparison executed", zh-TW: "比較已執行"}, path: run.status, op: eq, value: succeeded}
+      - {id: one, description: {en: "Exactly one variable changed", zh-TW: "剛好只改變一個變因"}, path: result.comparability.comparable, op: eq, value: true}
+    failure:
+      en: "If more than one variable differs (for example you also changed max_tokens), the comparison is flagged as confounded."
+      zh-TW: "如果不只一個變因不同（例如你也改了 max_tokens），這次比較會被標示為有干擾因素（confounded）。"
+    hints:
+      - {en: "Check the 'differences' list. Anything besides concurrency?", zh-TW: "檢查 differences 清單。除了並行數，還有別的嗎？"}
+    sources:
+      - {file: inference_lab/experiments.py, symbol: comparability}
+      - {file: inference_lab/bench/metrics.py, symbol: compare}
+  - id: s3-interpret
+    title: {en: "Knowledge check: where is the bottleneck?", zh-TW: "觀念檢查：瓶頸在哪裡？"}
+    what: {en: "Interpret what you measured on the mini server.", zh-TW: "解讀你在 mini server 上量到的結果。"}
+    why: {en: "The measurement only matters once you can explain it.", zh-TW: "量測只有在你能解釋它時才有意義。"}
+    concept: batching
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "Look at gen_lock in mini_server.py.", zh-TW: "看看 mini_server.py 裡的 gen_lock。"}
+    quiz:
+      question:
+        en: "Going from concurrency 1 to 4 on the mini server, TTFT rose a lot but throughput barely moved. The most likely bottleneck is:"
+        zh-TW: "在 mini server 上把並行數從 1 提高到 4，TTFT 大幅上升，但吞吐量幾乎沒變。最可能的瓶頸是："
+      options:
+        - {en: "Network bandwidth between client and server", zh-TW: "用戶端與伺服器之間的網路頻寬"}
+        - {en: "Requests wait in a queue because generation runs one request at a time (no batching)", zh-TW: "因為一次只生成一個請求（沒有 batching），請求都在排隊等待"}
+        - {en: "The tokenizer is too slow", zh-TW: "tokenizer 太慢"}
+      answer: 1
+      explanation:
+        en: "gen_lock serializes generation. Extra concurrent requests only add waiting, which appears as TTFT. Engines with continuous batching (vLLM) process them together, so throughput rises instead."
+        zh-TW: "gen_lock 讓生成變成一個接一個。多出來的並行請求只會增加等待時間，而這些等待會反映在 TTFT 上。具備 continuous batching 的引擎（vLLM）會把它們一起處理，所以提升的會是吞吐量。"
+optional_experiments:
+  - {en: "Change only max_tokens (16 → 48) and compare. Which metrics move?", zh-TW: "只改變 max_tokens（16 → 48）再比較一次。哪些指標會變？"}
+  - {en: "On a GPU machine, repeat both runs against vLLM and compare engines.", zh-TW: "在有 GPU 的機器上，對 vLLM 重跑這兩次，比較兩個引擎。"}

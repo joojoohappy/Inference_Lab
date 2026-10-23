@@ -1,0 +1,110 @@
+id: m04-build-your-server
+number: 4
+version: 1.0.0
+title: {en: "Build Your Server", zh-TW: "架起你的伺服器"}
+tagline:
+  en: "Inference in a script serves one person. A server serves everyone, all at once."
+  zh-TW: "在腳本裡推論只能服務一個人；伺服器則要同時服務所有人。"
+objectives:
+  - {en: "Explain the difference between local inference and serving.", zh-TW: "說明本機推論和 serving 的差別。"}
+  - {en: "Start a model server, wait for it to become healthy, and call its HTTP API.", zh-TW: "啟動模型伺服器、等它進入健康狀態，並呼叫它的 HTTP API。"}
+  - {en: "Know when to use vLLM and what it needs (NVIDIA GPU + Docker).", zh-TW: "知道什麼時候該用 vLLM，以及它需要什麼（NVIDIA GPU + Docker）。"}
+prerequisites: [m03-wake-it-up]
+concepts: [serving-vs-local, health-check, batching]
+references: [vllm-docs, kwon-2023-pagedattention, sglang-docs]
+completion_evidence:
+  en: "A server started by the lab that answered GET /health with HTTP 200, and a later health check that confirmed it."
+  zh-TW: "由 lab 啟動的伺服器以 HTTP 200 回應 GET /health，而且之後的健康檢查再次確認。"
+steps:
+  - id: s1-local-vs-serving
+    title: {en: "Knowledge check: why a server?", zh-TW: "觀念檢查：為什麼需要伺服器？"}
+    what: {en: "Think about what changes when many users send requests.", zh-TW: "想一想，當很多使用者同時送出請求時，會有什麼改變。"}
+    why: {en: "Serving introduces queues, batching and health checks.", zh-TW: "serving 會帶來排隊、batching 和健康檢查這些問題。"}
+    concept: serving-vs-local
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "Loading weights is slow. How often do you want to do it?", zh-TW: "載入權重很慢。你希望多久做一次？"}
+    quiz:
+      question:
+        en: "What is the main reason to run a model as a long-lived server instead of a script per request?"
+        zh-TW: "把模型跑成長期執行的伺服器、而不是每個請求跑一次腳本，主要原因是什麼？"
+      options:
+        - {en: "The weights are loaded once and reused, and many requests can share the hardware", zh-TW: "權重只需載入一次就能重複使用，而且很多請求可以共用硬體"}
+        - {en: "Servers make each token more accurate", zh-TW: "伺服器會讓每個 token 更準確"}
+        - {en: "Scripts cannot use a GPU", zh-TW: "腳本無法使用 GPU"}
+      answer: 0
+      explanation:
+        en: "Loading is expensive; a server pays it once. A server can also queue and batch requests from many clients. Accuracy is unchanged."
+        zh-TW: "載入的成本很高，伺服器只需付一次。伺服器還能把許多用戶端的請求排隊並合併成 batch。準確度則不會改變。"
+  - id: s2-start-mini
+    title: {en: "Start the mini server", zh-TW: "啟動 mini server"}
+    what:
+      en: "Starts python -m inference_lab.serving.mini_server on 127.0.0.1, then polls GET /health until it answers 200. The server speaks the same /v1/completions API as vLLM."
+      zh-TW: "在 127.0.0.1 上啟動 python -m inference_lab.serving.mini_server，接著持續詢問 GET /health，直到回應 200。這個伺服器使用和 vLLM 相同的 /v1/completions API。"
+    why:
+      en: "Same client, same benchmark, any engine. The mini server works without a GPU; it handles one request at a time on purpose."
+      zh-TW: "同樣的用戶端、同樣的 benchmark，可以換任何引擎。mini server 不需要 GPU；它刻意設計成一次只處理一個請求。"
+    concept: health-check
+    action: {id: server.start, params: {model: lab/tiny-random, kind: mini, port: 8800}, editable: [port]}
+    expected:
+      en: "The argv that was launched, startup time in seconds, and a health response with status ok."
+      zh-TW: "實際啟動的 argv、以秒計的啟動時間，以及 status 為 ok 的健康檢查回應。"
+    checks:
+      - {id: ran, description: {en: "Server started", zh-TW: "伺服器已啟動"}, path: run.status, op: eq, value: succeeded}
+      - {id: healthy, description: {en: "/health answered", zh-TW: "/health 有回應"}, path: result.health.healthy, op: eq, value: true}
+      - {id: local, description: {en: "Bound to localhost only", zh-TW: "只綁定在 localhost"}, path: result.base_url, op: contains, value: "127.0.0.1"}
+    failure:
+      en: "Fails if the port is in use or the model fails to load. The log tail is kept in the run."
+      zh-TW: "連接埠被占用或模型載入失敗時會失敗。紀錄尾端會保存在這次執行中。"
+    hints:
+      - {en: "If it fails, read the log tail: 'address already in use' means another program owns the port.", zh-TW: "如果失敗，讀一下紀錄尾端：「address already in use」代表有其他程式占用了這個連接埠。"}
+      - {en: "Try port 8801.", zh-TW: "試試連接埠 8801。"}
+    sources:
+      - {file: inference_lab/serving/mini_server.py, symbol: create_app}
+      - {file: inference_lab/serving/manager.py, symbol: mini_argv}
+    alternatives:
+      en: "vLLM, SGLang and Hugging Face TGI are production engines with continuous batching."
+      zh-TW: "vLLM、SGLang 和 Hugging Face TGI 是具備 continuous batching 的正式環境推論引擎。"
+    reproduce:
+      en: "python -m inference_lab.serving.mini_server --model lab/tiny-random --port 8800 &  curl -s http://127.0.0.1:8800/health ; curl -s http://127.0.0.1:8800/v1/completions -H 'Content-Type: application/json' -d '{\"prompt\":\"Hello\",\"max_tokens\":8}'"
+      zh-TW: "python -m inference_lab.serving.mini_server --model lab/tiny-random --port 8800 &  curl -s http://127.0.0.1:8800/health ; curl -s http://127.0.0.1:8800/v1/completions -H 'Content-Type: application/json' -d '{\"prompt\":\"Hello\",\"max_tokens\":8}'"
+  - id: s3-health
+    title: {en: "Check it is still alive", zh-TW: "確認它還活著"}
+    what: {en: "Sends GET /health again and reports the process state.", zh-TW: "再送一次 GET /health，並回報程序狀態。"}
+    why: {en: "Production systems check health continuously; a server that answered once can crash later.", zh-TW: "正式系統會持續檢查健康狀態；回應過一次的伺服器，之後還是可能當掉。"}
+    concept: health-check
+    action: {id: server.health}
+    expected: {en: "healthy: true, http_status: 200, and a request counter.", zh-TW: "healthy: true、http_status: 200，以及請求計數。"}
+    checks:
+      - {id: ok, description: {en: "Healthy", zh-TW: "健康"}, path: result.healthy, op: eq, value: true}
+      - {id: code, description: {en: "HTTP 200", zh-TW: "HTTP 200"}, path: result.http_status, op: eq, value: 200}
+    failure: {en: "No server running, or it crashed.", zh-TW: "沒有伺服器在執行，或它已經當掉。"}
+    hints:
+      - {en: "Run step 2 first.", zh-TW: "請先執行第 2 步。"}
+    sources:
+      - {file: inference_lab/serving/manager.py, symbol: ServerManager}
+  - id: s4-vllm
+    title: {en: "Optional: serve with vLLM", zh-TW: "選做：用 vLLM 提供服務"}
+    what:
+      en: "Runs the official vllm/vllm-openai container with --gpus all, bound to 127.0.0.1. Requires approval: it pulls a large image and uses the GPU."
+      zh-TW: "以 --gpus all 執行官方的 vllm/vllm-openai 容器，並綁定在 127.0.0.1。需要你同意：它會拉取大型映像檔並使用 GPU。"
+    why:
+      en: "vLLM uses PagedAttention and continuous batching to serve many concurrent requests efficiently."
+      zh-TW: "vLLM 透過 PagedAttention 和 continuous batching，有效率地服務大量並行請求。"
+    concept: paged-attention
+    action: {id: server.start, params: {model: Qwen/Qwen2.5-0.5B-Instruct, kind: vllm, port: 8000}, editable: [model, port]}
+    optional: true
+    requires_capabilities: [vllm_docker, hub_access]
+    expected: {en: "Healthy after model download and CUDA graph capture (can take minutes).", zh-TW: "在模型下載與 CUDA graph 擷取完成後進入健康狀態（可能需要幾分鐘）。"}
+    checks:
+      - {id: ran, description: {en: "vLLM started", zh-TW: "vLLM 已啟動"}, path: run.status, op: eq, value: succeeded}
+      - {id: healthy, description: {en: "/health answered", zh-TW: "/health 有回應"}, path: result.health.healthy, op: eq, value: true}
+    failure: {en: "Marked NOT RUN without an NVIDIA GPU and Docker.", zh-TW: "沒有 NVIDIA GPU 和 Docker 時會標示為「未執行」。"}
+    hints:
+      - {en: "docker logs -f inference-lab-vllm shows what vLLM is doing.", zh-TW: "docker logs -f inference-lab-vllm 可以看到 vLLM 正在做什麼。"}
+    sources:
+      - {file: inference_lab/serving/manager.py, symbol: vllm_argv}
+    reproduce:
+      en: "docker compose -f docker/vllm/docker-compose.yml up"
+      zh-TW: "docker compose -f docker/vllm/docker-compose.yml up"

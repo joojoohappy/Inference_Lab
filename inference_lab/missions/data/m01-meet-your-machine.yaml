@@ -1,0 +1,81 @@
+id: m01-meet-your-machine
+number: 1
+version: 1.0.0
+title: {en: "Meet Your Machine", zh-TW: "認識你的機器"}
+tagline:
+  en: "Before you run a model, find out what you are running it on."
+  zh-TW: "在執行模型之前，先搞清楚你要在什麼上面執行它。"
+objectives:
+  - {en: "Identify your CPU, RAM, GPU, VRAM, driver and Docker status.", zh-TW: "找出你的 CPU、RAM、GPU、VRAM、驅動程式版本與 Docker 狀態。"}
+  - {en: "Explain why VRAM decides which models a GPU can run.", zh-TW: "說明為什麼 VRAM 決定了一張 GPU 能跑哪些模型。"}
+  - {en: "Read the exact commands the scan ran and reproduce them yourself.", zh-TW: "看懂掃描實際執行的指令，並能自己重現。"}
+prerequisites: []
+concepts: [hardware-basics, vram]
+references: [hf-transformers-docs, vllm-docs]
+completion_evidence:
+  en: "A LIVE_MEASURED hardware record with at least 1 CPU core and non-zero RAM, plus a definite answer (found / not found) for GPU and Docker."
+  zh-TW: "一筆 LIVE_MEASURED 硬體紀錄：至少 1 個 CPU 核心、RAM 不為 0，而且 GPU 與 Docker 都有明確答案（找到／沒找到）。"
+steps:
+  - id: s1-scan
+    title: {en: "Scan this machine", zh-TW: "掃描這台機器"}
+    what:
+      en: "The lab asks the operating system about the CPU and memory, runs nvidia-smi to look for NVIDIA GPUs, asks Docker for its version, and checks which Python inference libraries are installed."
+      zh-TW: "lab 會向作業系統查詢 CPU 和記憶體，執行 nvidia-smi 尋找 NVIDIA GPU，詢問 Docker 的版本，並檢查安裝了哪些 Python 推論套件。"
+    why:
+      en: "Every later decision depends on this: which model fits, whether vLLM is possible, and how to read your benchmark numbers."
+      zh-TW: "之後的每個決定都取決於這一步：哪個模型放得下、能不能用 vLLM，以及要怎麼解讀 benchmark 數字。"
+    concept: hardware-basics
+    action: {id: hardware.scan}
+    expected:
+      en: "CPU model and core count, total RAM, and for GPU and Docker either details or a clear 'not found'. 'Not found' is a valid result, not a failure."
+      zh-TW: "CPU 型號與核心數、RAM 總量；GPU 和 Docker 要嘛有詳細資訊，要嘛明確顯示「沒找到」。「沒找到」也是有效結果，不是失敗。"
+    checks:
+      - {id: ran, description: {en: "The scan executed successfully", zh-TW: "掃描成功執行"}, path: run.status, op: eq, value: succeeded}
+      - {id: measured, description: {en: "Result is a live measurement", zh-TW: "結果是即時實測"}, path: run.provenance, op: eq, value: LIVE_MEASURED}
+      - {id: cpu, description: {en: "At least one CPU core found", zh-TW: "至少找到 1 個 CPU 核心"}, path: result.summary.logical_cores, op: gte, value: 1}
+      - {id: ram, description: {en: "RAM size is known", zh-TW: "已知 RAM 大小"}, path: result.summary.ram_total_gb, op: gt, value: 0}
+      - {id: gpu-answered, description: {en: "GPU probe gave a definite answer", zh-TW: "GPU 探測有明確答案"}, path: result.probes.gpu.status, op: in, value: [ok, not_found, error]}
+      - {id: docker-answered, description: {en: "Docker probe gave a definite answer", zh-TW: "Docker 探測有明確答案"}, path: result.probes.docker.status, op: in, value: [ok, not_found, error]}
+    failure:
+      en: "The scan itself crashed. A missing GPU or Docker is NOT a failure."
+      zh-TW: "掃描本身當掉才算失敗。沒有 GPU 或 Docker 並不算失敗。"
+    hints:
+      - {en: "Look at the run's log: every probe prints the command it used.", zh-TW: "看看這次執行的紀錄：每個探測都會印出它使用的指令。"}
+      - {en: "If the GPU shows 'not_found', run nvidia-smi in a terminal yourself. If that command is missing, there is no NVIDIA driver installed.", zh-TW: "如果 GPU 顯示 not_found，請在終端機自己執行 nvidia-smi。如果找不到這個指令，代表沒有安裝 NVIDIA 驅動程式。"}
+    sources:
+      - {file: inference_lab/hardware.py, symbol: probe_cpu}
+      - {file: inference_lab/hardware.py, symbol: parse_nvidia_smi}
+      - {file: inference_lab/hardware.py, symbol: probe_docker}
+    alternatives:
+      en: "On macOS, system_profiler SPHardwareDataType shows similar information; Apple GPUs are not visible to nvidia-smi."
+      zh-TW: "在 macOS 上，system_profiler SPHardwareDataType 可以看到類似資訊；Apple 的 GPU 不會出現在 nvidia-smi 裡。"
+    reproduce:
+      en: "nvidia-smi --query-gpu=index,name,memory.total,memory.used,driver_version,utilization.gpu --format=csv,noheader,nounits ; docker version ; python -c 'import os; print(os.cpu_count())'"
+      zh-TW: "nvidia-smi --query-gpu=index,name,memory.total,memory.used,driver_version,utilization.gpu --format=csv,noheader,nounits ; docker version ; python -c 'import os; print(os.cpu_count())'"
+  - id: s2-vram-check
+    title: {en: "Knowledge check: what lives in VRAM?", zh-TW: "觀念檢查：VRAM 裡放了什麼？"}
+    what:
+      en: "A quick question to make sure the key idea stuck."
+      zh-TW: "一個小問題，確認你抓到了關鍵觀念。"
+    why:
+      en: "Running out of VRAM is the most common reason a model refuses to load on a GPU."
+      zh-TW: "VRAM 不夠，是模型在 GPU 上無法載入最常見的原因。"
+    concept: vram
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Wrong answers are fine; read the explanation and try again.", zh-TW: "答錯沒關係，讀一下說明再試一次。"}
+    hints:
+      - {en: "Think about what must be close to the GPU cores while generating every token.", zh-TW: "想想看，在生成每個 token 時，什麼東西必須放在離 GPU 核心很近的地方。"}
+    quiz:
+      question:
+        en: "During LLM inference on a GPU, what mainly occupies VRAM?"
+        zh-TW: "在 GPU 上做 LLM 推論時，VRAM 主要被什麼占用？"
+      options:
+        - {en: "The model weights, the KV cache, and temporary activations", zh-TW: "模型權重、KV cache，以及暫時的 activation"}
+        - {en: "The operating system and open browser tabs", zh-TW: "作業系統和開著的瀏覽器分頁"}
+        - {en: "Only the prompt text", zh-TW: "只有提示詞文字"}
+      answer: 0
+      explanation:
+        en: "Weights are loaded once and stay. The KV cache grows with the number of tokens being processed. Activations are short-lived working memory. Together they must fit."
+        zh-TW: "權重載入一次後就一直留著。KV cache 會隨著正在處理的 token 數量增加。activation 則是短暫的工作記憶體。這三者加起來必須放得下。"
+optional_experiments:
+  - {en: "Run the scan while a game or video is open and compare vram_used_mb.", zh-TW: "開著遊戲或影片時再掃描一次，比較 vram_used_mb。"}

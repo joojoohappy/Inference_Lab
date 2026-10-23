@@ -1,0 +1,107 @@
+# Curated explanations of the actual executed source, keyed by "file:symbol".
+# Each level explains the real code; nothing here is sample code.
+
+inference_lab/hardware.py:probe_gpu:
+  claim_type: implementation
+  simple:
+    en: "Runs nvidia-smi with fixed arguments and turns its comma-separated answer into a list of GPUs. If nvidia-smi is not installed, it says 'not_found' instead of crashing."
+    zh-TW: "用固定參數執行 nvidia-smi，把它以逗號分隔的回答轉成 GPU 清單。如果沒有安裝 nvidia-smi，它會回報 not_found，而不是當掉。"
+  logic:
+    en: "_run() first checks the command exists (exit 127 if not), runs it without a shell with a timeout, and parse_nvidia_smi() parses each CSV line. Any non-zero exit becomes status 'error' with the raw output kept."
+    zh-TW: "_run() 會先確認指令存在（不存在時回傳 exit 127），在沒有 shell 的情況下帶逾時執行，再由 parse_nvidia_smi() 解析每一行 CSV。任何非 0 的結束碼都會變成 status 'error'，並保留原始輸出。"
+  design:
+    en: "Probes never raise. Returning a structured Probe (command, raw, data) lets the UI show exactly what ran and lets missions treat 'no GPU' as a valid answer."
+    zh-TW: "探測永遠不丟出例外。回傳結構化的 Probe（command、raw、data）讓介面能精確顯示執行了什麼，也讓任務把「沒有 GPU」當成有效答案。"
+  tradeoffs:
+    en: "Using the CLI avoids a dependency on NVML bindings (pynvml) but costs a process spawn per sample and only covers NVIDIA."
+    zh-TW: "使用 CLI 可以避免依賴 NVML 綁定（pynvml），代價是每次取樣都要啟動一個程序，而且只支援 NVIDIA。"
+
+inference_lab/inference.py:run_inference:
+  claim_type: implementation
+  simple:
+    en: "Loads the tokenizer and model from disk, turns the prompt into token ids, generates new tokens one by one (always picking the most likely), and turns them back into text, timing each step."
+    zh-TW: "從磁碟載入 tokenizer 和模型，把提示詞轉成 token id，一個一個生成新 token（永遠挑最可能的那個），再把它們變回文字，並替每一步計時。"
+  logic:
+    en: "A _TokenClock is passed as a stopping criterion. generate() calls it after each new token, so its timestamps give TTFT (first stamp − start) and TPOT (mean gap between stamps). It always returns False, so it never stops generation."
+    zh-TW: "_TokenClock 被當作 stopping criterion 傳入。generate() 每產生一個新 token 就會呼叫它，所以它的時間戳記可以算出 TTFT（第一個時間戳記 − 開始時間）和 TPOT（時間戳記之間的平均間隔）。它永遠回傳 False，所以不會停止生成。"
+  design:
+    en: "local_files_only=True and trust_remote_code=False make loading explicit and safe: no hidden downloads, no repository code execution. Inputs are bounded (prompt ≤ 4000 chars, ≤ 256 new tokens)."
+    zh-TW: "local_files_only=True 和 trust_remote_code=False 讓載入過程明確又安全：沒有隱藏的下載，也不會執行 repository 裡的程式碼。輸入也有上限（提示詞 ≤ 4000 字元，新 token ≤ 256 個）。"
+  tradeoffs:
+    en: "In-process timing excludes HTTP overhead, so it is lower than the TTFT a server client sees. That difference is itself a useful lesson."
+    zh-TW: "在程序內計時不包含 HTTP 的額外開銷，所以會比伺服器用戶端看到的 TTFT 低。這個差異本身就是很好的一課。"
+
+inference_lab/serving/mini_server.py:create_app:
+  claim_type: implementation
+  simple:
+    en: "Creates a small web server that keeps the model loaded and answers /health, /v1/models and /v1/completions, the same paths vLLM uses."
+    zh-TW: "建立一個小型網頁伺服器，讓模型保持載入狀態，並回應 /health、/v1/models 和 /v1/completions，和 vLLM 使用相同的路徑。"
+  logic:
+    en: "Streaming requests run generate() in a worker thread with a streamer that pushes each new token id into an asyncio queue; the HTTP handler turns each into a Server-Sent Event. gen_lock allows one generation at a time."
+    zh-TW: "串流請求會在 worker 執行緒中執行 generate()，搭配一個 streamer 把每個新 token id 推進 asyncio queue；HTTP 處理器再把每一個轉成 Server-Sent Event。gen_lock 讓同一時間只能有一個生成在執行。"
+  design:
+    en: "gen_lock is deliberate: it makes queueing visible and measurable, which Mission 06 investigates. Real engines replace it with continuous batching."
+    zh-TW: "gen_lock 是刻意設計的：它讓排隊變得看得見、量得到，這正是任務 06 要研究的。真正的推論引擎會用 continuous batching 取代它。"
+  tradeoffs:
+    en: "Simple and dependency-light, but throughput cannot grow with concurrency. Do not use it for production."
+    zh-TW: "簡單、依賴少，但吞吐量無法隨並行數成長。請勿用於正式環境。"
+
+inference_lab/bench/loadgen.py:run_benchmark:
+  claim_type: implementation
+  simple:
+    en: "Sends warm-up requests, then several rounds of requests at a chosen concurrency, records how long each took, and summarizes the results."
+    zh-TW: "先送暖機請求，再以選定的並行數送出好幾輪請求，記錄每個請求花多久，最後整理成結果摘要。"
+  logic:
+    en: "Each trial starts `concurrency` async workers sharing a counter; each sends the next streamed request when its previous one finishes (closed loop). A ResourceSampler thread samples server RSS/CPU and GPU memory meanwhile."
+    zh-TW: "每一輪會啟動 concurrency 個非同步 worker，共用一個計數器；每個 worker 在前一個請求完成後就送出下一個串流請求（封閉迴圈）。同時有一個 ResourceSampler 執行緒取樣伺服器的 RSS／CPU 與 GPU 記憶體。"
+  design:
+    en: "Raw per-request samples are kept so metrics can be recomputed later; warm-up failure aborts instead of producing a misleading result."
+    zh-TW: "每個請求的原始樣本都會保留，之後可以重新計算指標；暖機失敗時會中止，而不是產生誤導性的結果。"
+  tradeoffs:
+    en: "Python asyncio clients add some overhead; for very high request rates a compiled load generator is more precise."
+    zh-TW: "Python asyncio 用戶端會帶來一些額外開銷；請求速率非常高時，編譯型的負載產生器會更精確。"
+
+inference_lab/bench/metrics.py:percentile:
+  claim_type: established
+  simple:
+    en: "Sorts the numbers and finds the value a given percent of the way through the list."
+    zh-TW: "把數字排序，找出位於清單中特定百分比位置的值。"
+  logic:
+    en: "k = (n − 1) × p / 100. If k falls between two positions, it interpolates linearly between them (the same default as NumPy's 'linear' method)."
+    zh-TW: "k = (n − 1) × p / 100。如果 k 落在兩個位置之間，就在兩者之間做線性內插（和 NumPy 預設的 linear 方法相同）。"
+  design:
+    en: "Pure function, no NumPy dependency, tested against known values."
+    zh-TW: "純函式、不依賴 NumPy，並用已知數值做過測試。"
+  tradeoffs:
+    en: "Other percentile definitions (nearest-rank) give slightly different numbers on small samples; state which one you use when comparing tools."
+    zh-TW: "其他百分位數定義（例如 nearest-rank）在樣本少時會得到略有不同的數字；比較不同工具時，請說明你用的是哪一種。"
+
+inference_lab/experiments.py:comparability:
+  claim_type: implementation
+  simple:
+    en: "Lists what is different between two experiments, and says whether the comparison is fair."
+    zh-TW: "列出兩個實驗之間有哪些不同，並判斷這個比較是否公平。"
+  logic:
+    en: "It checks model id, revision, hardware fingerprint, engine name and version, and each workload setting. Fair = exactly one difference, and both records are measurements."
+    zh-TW: "它會檢查模型 ID、版本、硬體指紋、引擎名稱與版本，以及每一項工作負載設定。公平 = 剛好只有一個差異，而且兩筆紀錄都是實測資料。"
+  design:
+    en: "Deterministic rules instead of AI judgement, so the same records always give the same verdict."
+    zh-TW: "使用確定性的規則而不是 AI 判斷，所以同樣的紀錄永遠得到同樣的結論。"
+  tradeoffs:
+    en: "It cannot detect uncontrolled changes such as background load or thermal throttling; those belong in the report's limitations."
+    zh-TW: "它無法偵測沒被控制的變化，例如背景負載或過熱降頻；這些應該寫在報告的限制中。"
+
+inference_lab/actions.py:Lab:
+  claim_type: implementation
+  simple:
+    en: "The control room: it receives a request to run a named action, checks permission and hardware, runs it, and keeps the logs and result."
+    zh-TW: "控制室：它接收「執行某個指定動作」的請求，檢查權限和硬體，執行後保存紀錄和結果。"
+  logic:
+    en: "submit() validates parameters with Pydantic, blocks actions that need approval when approve is false, marks actions NOT RUN when a capability is missing, and otherwise runs the handler in a thread with heartbeats."
+    zh-TW: "submit() 用 Pydantic 驗證參數；需要同意但 approve 為 false 的動作會被擋下；缺少能力時標示為「未執行」；其餘情況就在執行緒中執行處理函式，並持續送出心跳。"
+  design:
+    en: "There is no generic shell endpoint. Every action is an allowlisted Python function with a declared approval policy, required capabilities and source references."
+    zh-TW: "沒有通用的 shell 端點。每個動作都是允許清單中的 Python 函式，並宣告了同意政策、所需能力與原始碼參考。"
+  tradeoffs:
+    en: "Python threads cannot be force-killed, so a hung action is reported by stuck detection rather than terminated."
+    zh-TW: "Python 執行緒無法被強制終止，所以卡住的動作會由卡住偵測回報，而不是被終止。"

@@ -1,0 +1,106 @@
+id: m02-find-your-model
+number: 2
+version: 1.0.0
+title: {en: "Find Your Model", zh-TW: "找到你的模型"}
+tagline:
+  en: "A model is a folder of files. Learn to read them before you run them."
+  zh-TW: "模型就是一個裝滿檔案的資料夾。執行之前，先學會讀懂它們。"
+objectives:
+  - {en: "Read a model ID (owner/name) and a Model Card.", zh-TW: "看懂模型 ID（owner/name）與 Model Card。"}
+  - {en: "Find parameter count, weight format, tokenizer and chat template from real files.", zh-TW: "從實際檔案找出參數量、權重格式、tokenizer 與 chat template。"}
+  - {en: "Estimate memory needs and judge compatibility with your hardware, stating the assumptions.", zh-TW: "估算記憶體需求並判斷與硬體的相容性，同時說明前提假設。"}
+  - {en: "Recognise license, gating and remote-code risks.", zh-TW: "認識授權、gated 存取與遠端程式碼的風險。"}
+prerequisites: [m01-meet-your-machine]
+concepts: [model-id, model-card, parameters-memory, tokenizer, safetensors]
+references: [hf-hub-docs, hf-model-cards, hf-transformers-docs]
+completion_evidence:
+  en: "A LIVE_MEASURED inspection of real model files with a parameter count and a memory estimate, plus a correct answer about licenses and remote code."
+  zh-TW: "一筆對真實模型檔案的 LIVE_MEASURED 檢視，包含參數量和記憶體估算，並正確回答授權與遠端程式碼的問題。"
+steps:
+  - id: s1-inspect-local
+    title: {en: "Open a model folder", zh-TW: "打開一個模型資料夾"}
+    what:
+      en: "The lab builds (if needed) the offline teaching model lab/tiny-random, then reads its config.json, tokenizer files and the safetensors headers to count parameters. Nothing is loaded into memory."
+      zh-TW: "lab 會（在需要時）先建立離線教學模型 lab/tiny-random，接著讀取它的 config.json、tokenizer 檔案與 safetensors 標頭來計算參數量。過程中不會把模型載入記憶體。"
+    why:
+      en: "Every Hugging Face model is the same kind of folder. Once you can read one, you can read the 70B ones too."
+      zh-TW: "每個 Hugging Face 模型都是同一種資料夾。只要看懂一個，70B 的模型你也看得懂。"
+    concept: safetensors
+    action: {id: model.inspect_local, params: {model: lab/tiny-random}}
+    expected:
+      en: "Architecture GPT2LMHeadModel, about 1 million parameters stored as F32, a tokenizer with ~512 tokens, and a tiny memory estimate."
+      zh-TW: "架構為 GPT2LMHeadModel、約 100 萬個以 F32 儲存的參數、約 512 個 token 的 tokenizer，以及非常小的記憶體估算。"
+    checks:
+      - {id: ran, description: {en: "Inspection succeeded", zh-TW: "檢視成功"}, path: run.status, op: eq, value: succeeded}
+      - {id: params, description: {en: "Parameter count was read from the weights", zh-TW: "已從權重讀出參數量"}, path: result.summary.parameters, op: gt, value: 0}
+      - {id: arch, description: {en: "Architecture identified", zh-TW: "已辨識架構"}, path: result.summary.architectures, op: len_gte, value: 1}
+      - {id: tok, description: {en: "Tokenizer found", zh-TW: "找到 tokenizer"}, path: result.summary.has_tokenizer, op: eq, value: true}
+      - {id: est, description: {en: "Memory estimate computed", zh-TW: "已計算記憶體估算"}, path: result.memory_estimate.known, op: eq, value: true}
+    failure:
+      en: "Fails if PyTorch is missing (needed once to build the teaching model) or the files are unreadable."
+      zh-TW: "如果缺少 PyTorch（建立教學模型時需要一次），或檔案無法讀取，就會失敗。"
+    hints:
+      - {en: "Open View Source for count_parameters: it reads only the first bytes of each file.", zh-TW: "打開 count_parameters 的原始碼：它只讀每個檔案最前面的幾個位元組。"}
+      - {en: "Parameter count = the sum over tensors of the product of each tensor's shape.", zh-TW: "參數量 = 所有 tensor 形狀各維相乘後的總和。"}
+    sources:
+      - {file: inference_lab/local_model.py, symbol: read_safetensors_header}
+      - {file: inference_lab/memory.py, symbol: kv_cache_bytes_per_token}
+    reproduce:
+      en: "python -c \"import json,struct; f=open('model.safetensors','rb'); n=struct.unpack('<Q', f.read(8))[0]; print(list(json.loads(f.read(n)))[:5])\""
+      zh-TW: "python -c \"import json,struct; f=open('model.safetensors','rb'); n=struct.unpack('<Q', f.read(8))[0]; print(list(json.loads(f.read(n)))[:5])\""
+  - id: s2-inspect-hub
+    title: {en: "Inspect a real model on the Hub", zh-TW: "檢視 Hub 上的真實模型"}
+    what:
+      en: "The lab calls the documented Hub API (GET /api/models/<id>) and downloads only config.json and tokenizer_config.json to show task, license, file sizes, weight formats, gating, and whether remote code is required."
+      zh-TW: "lab 會呼叫官方文件記載的 Hub API（GET /api/models/<id>），只下載 config.json 和 tokenizer_config.json，用來顯示任務類型、授權、檔案大小、權重格式、是否 gated，以及是否需要遠端程式碼。"
+    why:
+      en: "Choosing a model is an engineering decision: size, license and format matter as much as quality."
+      zh-TW: "選模型是一個工程決策：大小、授權與格式，和品質一樣重要。"
+    concept: model-card
+    action: {id: hub.inspect, params: {model: HuggingFaceTB/SmolLM2-135M-Instruct}, editable: [model]}
+    optional: true
+    requires_capabilities: [hub_access]
+    expected:
+      en: "Live metadata, a memory estimate with listed assumptions, and a compatibility verdict for this machine."
+      zh-TW: "即時的中繼資料、附上前提假設的記憶體估算，以及針對這台機器的相容性判斷。"
+    checks:
+      - {id: ran, description: {en: "Hub inspection succeeded", zh-TW: "Hub 檢視成功"}, path: run.status, op: eq, value: succeeded}
+      - {id: id, description: {en: "Model id confirmed by the Hub", zh-TW: "Hub 確認了模型 ID"}, path: result.summary.id, op: exists}
+      - {id: verdict, description: {en: "Compatibility verdict produced", zh-TW: "產生相容性判斷"}, path: result.compatibility.verdict, op: in, value: [fits_gpu, cpu_only, too_large, unknown]}
+    failure:
+      en: "Not available offline or behind a firewall that blocks huggingface.co; the step is then marked NOT RUN, not failed."
+      zh-TW: "離線或防火牆擋住 huggingface.co 時無法使用；這時這一步會標示為「未執行」，而不是失敗。"
+    hints:
+      - {en: "Model ids look like owner/name and are case-sensitive.", zh-TW: "模型 ID 長得像 owner/name，而且大小寫有差。"}
+      - {en: "You can paste a full https://huggingface.co/... URL too.", zh-TW: "你也可以直接貼上完整的 https://huggingface.co/... 網址。"}
+    sources:
+      - {file: inference_lab/hub.py, symbol: normalize_model_ref}
+      - {file: inference_lab/hub.py, symbol: download_plan}
+    reproduce:
+      en: "curl -s https://huggingface.co/api/models/HuggingFaceTB/SmolLM2-135M-Instruct?blobs=true | python -m json.tool | head -60"
+      zh-TW: "curl -s https://huggingface.co/api/models/HuggingFaceTB/SmolLM2-135M-Instruct?blobs=true | python -m json.tool | head -60"
+  - id: s3-safety-check
+    title: {en: "Knowledge check: safe to load?", zh-TW: "觀念檢查：可以安全載入嗎？"}
+    what: {en: "Decide which model is safest to load automatically.", zh-TW: "判斷哪個模型最適合自動載入。"}
+    why:
+      en: "Loading some model files can execute code on your machine."
+      zh-TW: "載入某些模型檔案，可能會在你的電腦上執行程式碼。"
+    concept: safetensors
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "Which format is pure data, with no code inside?", zh-TW: "哪一種格式是純資料、裡面沒有程式碼？"}
+    quiz:
+      question:
+        en: "Which model is safest for Inference Lab to load automatically?"
+        zh-TW: "哪一個模型最適合讓 Inference Lab 自動載入？"
+      options:
+        - {en: "Ships .bin pickle weights and needs trust_remote_code=True", zh-TW: "提供 .bin（pickle）權重，而且需要 trust_remote_code=True"}
+        - {en: "Ships .safetensors weights, Apache-2.0 license, no remote code", zh-TW: "提供 .safetensors 權重、Apache-2.0 授權、不需要遠端程式碼"}
+        - {en: "Gated model whose terms you have not accepted", zh-TW: "你還沒同意條款的 gated 模型"}
+      answer: 1
+      explanation:
+        en: "safetensors files contain only tensors, so loading them cannot run code. Pickle (.bin) and remote code can. Gated models require you to accept terms on the Hub first."
+        zh-TW: "safetensors 檔案只包含 tensor，所以載入時不會執行程式碼。pickle（.bin）和遠端程式碼則可能會。gated 模型則需要你先在 Hub 上同意條款。"
+optional_experiments:
+  - {en: "Inspect two models of different sizes and compare their memory estimates and verdicts.", zh-TW: "檢視兩個大小不同的模型，比較它們的記憶體估算和相容性判斷。"}

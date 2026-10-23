@@ -1,0 +1,382 @@
+# Research Archive registry. Primary sources only. Never invent a record.
+# verification.method: fetched = the source page was fetched on `date` and title/authors checked
+#                      not_fetched = could not be fetched from the build environment; treat with care
+- id: vaswani-2017
+  title: "Attention Is All You Need"
+  authors: [Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin]
+  kind: paper
+  year: 2017
+  venue: "NeurIPS 2017 (arXiv:1706.03762)"
+  url: https://arxiv.org/abs/1706.03762
+  concepts: [inference-pipeline, kv-cache]
+  related_missions: [m03-wake-it-up, m06-hunt-the-bottleneck]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, authors]}
+  beginner:
+    en: "Introduced the Transformer: a model that decides which earlier words matter for each new word using 'attention', instead of reading strictly one word at a time."
+    zh-TW: "提出了 Transformer：一種用「attention」決定每個新字該參考哪些前面字詞的模型，而不是嚴格地一次只讀一個字。"
+  engineering:
+    en: "Self-attention compares each token's query with every earlier token's key. During generation those keys and values can be cached, which is where the KV cache comes from."
+    zh-TW: "self-attention 會把每個 token 的 query 和前面每個 token 的 key 做比較。生成時這些 key 和 value 可以被快取起來，KV cache 就是這樣來的。"
+  contributions:
+    en: "Replaced recurrence with attention, enabling parallel training; multi-head attention; the encoder-decoder Transformer architecture."
+    zh-TW: "用 attention 取代遞迴結構，讓訓練可以平行化；提出 multi-head attention 與 encoder-decoder Transformer 架構。"
+  practical:
+    en: "Every model in this lab (GPT-2-shaped tiny model, SmolLM2, Qwen2.5) is a decoder-only descendant of this architecture."
+    zh-TW: "這個 lab 裡的每個模型（GPT-2 結構的 tiny 模型、SmolLM2、Qwen2.5）都是這個架構的 decoder-only 後代。"
+  limitations:
+    en: "Attention cost grows quadratically with sequence length; the paper evaluated translation, not today's large language models."
+    zh-TW: "attention 的成本會隨序列長度平方成長；這篇論文評估的是翻譯，而不是今天的大型語言模型。"
+
+- id: kwon-2023-pagedattention
+  title: "Efficient Memory Management for Large Language Model Serving with PagedAttention"
+  authors: [Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody Hao Yu, Joseph E. Gonzalez, Hao Zhang, Ion Stoica]
+  kind: paper
+  year: 2023
+  venue: "SOSP 2023 (arXiv:2309.06180)"
+  url: https://arxiv.org/abs/2309.06180
+  concepts: [paged-attention, kv-cache, batching, vram]
+  related_missions: [m04-build-your-server, m06-hunt-the-bottleneck]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, authors, venue]}
+  beginner:
+    en: "Shows that a lot of GPU memory was wasted by reserving space for each conversation's memory in advance, and fixes it by handing out memory in small pages only when needed."
+    zh-TW: "指出過去替每段對話預先保留記憶體，浪費了大量 GPU 記憶體；解法是只在需要時才以小頁面的方式分配記憶體。"
+  engineering:
+    en: "Stores KV cache in fixed-size blocks mapped through a block table, like OS virtual memory. Less fragmentation means larger batches, which raises throughput. The system built on it is vLLM."
+    zh-TW: "把 KV cache 存在固定大小的區塊中，透過 block table 對應，類似作業系統的虛擬記憶體。碎片化減少代表 batch 可以更大，吞吐量也跟著提升。建構在它之上的系統就是 vLLM。"
+  contributions:
+    en: "PagedAttention algorithm; block-level memory sharing (e.g. for parallel sampling and shared prefixes); the vLLM serving system."
+    zh-TW: "PagedAttention 演算法；區塊層級的記憶體共享（例如平行取樣與共同前綴）；vLLM serving 系統。"
+  practical:
+    en: "Explains why vLLM pre-allocates most VRAM (--gpu-memory-utilization) and why its throughput grows with concurrency, unlike the lab's mini server."
+    zh-TW: "說明了為什麼 vLLM 會預先配置大部分 VRAM（--gpu-memory-utilization），以及為什麼它的吞吐量會隨並行數成長，而 lab 的 mini server 不會。"
+  limitations:
+    en: "Reported speedups are relative to the baselines and hardware of 2023; your gains depend on model, workload and engine version, and must be measured."
+    zh-TW: "論文中的加速倍數是相對於 2023 年的基準系統與硬體；你實際能得到的提升取決於模型、工作負載與引擎版本，必須自己量測。"
+
+- id: mlperf-inference-2020
+  title: "MLPerf Inference Benchmark"
+  authors: [Vijay Janapa Reddi, Christine Cheng, David Kanter, Peter Mattson, Guenther Schmuelling, "et al. (47 authors)"]
+  kind: paper
+  year: 2020
+  venue: "arXiv:1911.02549 (v2, 2020)"
+  url: https://arxiv.org/abs/1911.02549
+  concepts: [benchmark-methodology, percentiles, concurrency, ttft]
+  related_missions: [m05-put-it-to-the-test, m06-hunt-the-bottleneck, m07-defend-your-decision]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, first_authors, author_count]}
+  beginner:
+    en: "Describes how to test AI systems fairly so results from different companies can be compared: same tasks, same rules, same way of measuring."
+    zh-TW: "說明如何公平地測試 AI 系統，讓不同公司的結果可以互相比較：同樣的任務、同樣的規則、同樣的量測方式。"
+  engineering:
+    en: "Defines scenarios (single-stream, multi-stream, server, offline) with latency constraints expressed as percentiles, plus a load generator and run rules."
+    zh-TW: "定義了多種情境（single-stream、multi-stream、server、offline），以百分位數表達延遲限制，並提供負載產生器與執行規則。"
+  contributions:
+    en: "A shared methodology and the observation that the scenario (how queries arrive) changes what 'fast' means."
+    zh-TW: "一套共同的方法論，並指出情境（查詢如何到達）會改變「快」的定義。"
+  practical:
+    en: "The lab's warm-up, repeated trials, percentile reporting and fixed workload follow the same spirit. Its closed-loop test is closest to a multi-user server scenario, but it is not an MLPerf-compliant run."
+    zh-TW: "lab 的暖機、重複多輪、百分位數報告與固定工作負載，都依循同樣的精神。它的封閉迴圈測試最接近多使用者的 server 情境，但並不是符合 MLPerf 規範的執行。"
+  limitations:
+    en: "The 2020 paper predates today's LLM benchmarks; current MLPerf Inference rounds define their own LLM tasks and rules on mlcommons.org."
+    zh-TW: "這篇 2020 年的論文早於今天的 LLM benchmark；目前 MLPerf Inference 各輪的 LLM 任務與規則請見 mlcommons.org。"
+
+- id: pope-2022-scaling
+  title: "Efficiently Scaling Transformer Inference"
+  authors: [Reiner Pope, Sholto Douglas, Aakanksha Chowdhery, Jacob Devlin, James Bradbury, Anselm Levskaya, Jonathan Heek, Kefan Xiao, Shivani Agrawal, Jeff Dean]
+  kind: paper
+  year: 2022
+  venue: "arXiv:2211.05102"
+  url: https://arxiv.org/abs/2211.05102
+  concepts: [latency-throughput, kv-cache, batching]
+  related_missions: [m06-hunt-the-bottleneck]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, authors]}
+  beginner:
+    en: "Studies how to run very large models fast on many chips, and explains why the best setup for low latency differs from the best setup for high throughput."
+    zh-TW: "研究如何在多顆晶片上快速執行超大型模型，並說明為什麼追求低延遲和追求高吞吐量的最佳設定不同。"
+  engineering:
+    en: "Analyses prefill vs decode, memory-bandwidth limits during decoding, and partitioning strategies, using an analytical cost model."
+    zh-TW: "用分析式的成本模型，探討 prefill 與 decode、解碼時的記憶體頻寬限制，以及模型切分策略。"
+  contributions:
+    en: "A framework for choosing partitioning layouts by latency/throughput target; multi-query attention for smaller KV cache."
+    zh-TW: "一套依延遲／吞吐量目標選擇切分方式的框架；以 multi-query attention 縮小 KV cache。"
+  practical:
+    en: "Gives the reasoning behind Mission 06: decoding is often memory-bound, so batching improves throughput while single-request speed barely changes."
+    zh-TW: "提供任務 06 背後的推理：解碼常受記憶體限制，所以 batching 能提升吞吐量，而單一請求的速度幾乎不變。"
+  limitations:
+    en: "Experiments use TPU v4 and PaLM-scale models; absolute numbers do not transfer to small models on a laptop."
+    zh-TW: "實驗使用 TPU v4 與 PaLM 規模的模型；絕對數字無法直接套用到筆電上的小模型。"
+
+- id: dao-2022-flashattention
+  title: "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness"
+  authors: [Tri Dao, Daniel Y. Fu, Stefano Ermon, Atri Rudra, Christopher Ré]
+  kind: paper
+  year: 2022
+  venue: "arXiv:2205.14135"
+  url: https://arxiv.org/abs/2205.14135
+  concepts: [vram, latency-throughput]
+  related_missions: [m06-hunt-the-bottleneck]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, authors]}
+  beginner:
+    en: "Makes attention faster by reducing how often data travels between slow and fast GPU memory, without changing the answer."
+    zh-TW: "在不改變結果的情況下，減少資料在 GPU 慢速與快速記憶體之間搬移的次數，讓 attention 變快。"
+  engineering:
+    en: "Tiles the attention computation to keep blocks in on-chip SRAM and avoids materializing the full attention matrix in HBM."
+    zh-TW: "把 attention 計算切成小塊，讓區塊留在晶片上的 SRAM，避免在 HBM 中產生完整的 attention 矩陣。"
+  contributions:
+    en: "IO-aware exact attention algorithm and analysis of memory traffic as the real bottleneck."
+    zh-TW: "考量 IO 的精確 attention 演算法，並分析記憶體流量才是真正的瓶頸。"
+  practical:
+    en: "A reminder that many inference optimizations are about moving less data, not doing less math."
+    zh-TW: "提醒我們：許多推論最佳化的重點是搬更少的資料，而不是做更少的運算。"
+  limitations:
+    en: "Requires specific GPU kernels; benefits are largest for long sequences."
+    zh-TW: "需要特定的 GPU kernel；序列越長，效益越明顯。"
+
+- id: dettmers-2022-int8
+  title: "LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale"
+  authors: [Tim Dettmers, Mike Lewis, Younes Belkada, Luke Zettlemoyer]
+  kind: paper
+  year: 2022
+  venue: "NeurIPS 2022 (arXiv:2208.07339)"
+  url: https://arxiv.org/abs/2208.07339
+  concepts: [quantization, parameters-memory]
+  related_missions: [m02-find-your-model]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, authors, venue]}
+  beginner:
+    en: "Shows how to store most of a big model in 8-bit numbers, halving memory compared with 16-bit, while keeping quality."
+    zh-TW: "示範如何用 8 位元數字儲存大型模型的大部分內容，記憶體比 16 位元少一半，同時維持品質。"
+  engineering:
+    en: "Vector-wise quantization plus a mixed-precision decomposition that keeps rare large-magnitude outlier features in 16-bit."
+    zh-TW: "逐向量量化，再加上混合精度分解，把少數數值特別大的離群特徵保留在 16 位元。"
+  contributions:
+    en: "Identified emergent outlier features in large Transformers and a method that handles them."
+    zh-TW: "發現大型 Transformer 中會出現的離群特徵，並提出處理它們的方法。"
+  practical:
+    en: "Explains why the memory estimate changes with dtype, and why a quantized model may fit where the bf16 one does not."
+    zh-TW: "說明了為什麼記憶體估算會隨 dtype 改變，以及為什麼量化後的模型可能放得下，而 bf16 版本放不下。"
+  limitations:
+    en: "Memory savings do not automatically mean speed-ups; speed depends on kernels and hardware."
+    zh-TW: "省下記憶體不代表一定會變快；速度取決於 kernel 與硬體。"
+
+- id: frantar-2022-gptq
+  title: "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers"
+  authors: [Elias Frantar, Saleh Ashkboos, Torsten Hoefler, Dan Alistarh]
+  kind: paper
+  year: 2023
+  venue: "ICLR 2023 (arXiv:2210.17323)"
+  url: https://arxiv.org/abs/2210.17323
+  concepts: [quantization]
+  related_missions: [m02-find-your-model]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, authors, venue]}
+  beginner:
+    en: "A way to shrink a trained model to 3–4 bits per weight after training, with little quality loss."
+    zh-TW: "一種在訓練完成後，把模型壓縮到每個權重 3 到 4 位元的方法，品質損失很小。"
+  engineering:
+    en: "One-shot, layer-wise quantization that uses approximate second-order (Hessian) information to compensate for rounding error."
+    zh-TW: "一次完成、逐層進行的量化，利用近似的二階（Hessian）資訊來補償捨入誤差。"
+  contributions:
+    en: "Made 4-bit weight quantization of very large models practical in hours on a single GPU."
+    zh-TW: "讓超大型模型的 4 位元權重量化，能在單張 GPU 上幾小時內完成。"
+  practical:
+    en: "Many Hub repos ship GPTQ variants; check the engine supports the format before downloading."
+    zh-TW: "Hub 上很多 repo 都有提供 GPTQ 版本；下載前請先確認推論引擎支援這個格式。"
+  limitations:
+    en: "Quality impact varies by model and task; measure on your own evaluation."
+    zh-TW: "對品質的影響會因模型與任務而異；請用自己的評估資料量測。"
+
+- id: sglang-2023
+  title: "SGLang: Efficient Execution of Structured Language Model Programs"
+  authors: [Lianmin Zheng, Liangsheng Yin, Zhiqiang Xie, Chuyue Sun, Jeff Huang, "et al."]
+  kind: paper
+  year: 2023
+  venue: "arXiv:2312.07104"
+  url: https://arxiv.org/abs/2312.07104
+  concepts: [serving-vs-local, kv-cache, batching]
+  related_missions: [m04-build-your-server]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, first_authors]}
+  beginner:
+    en: "Introduces SGLang, a serving system that is especially fast when many requests share the same beginning (like the same instructions)."
+    zh-TW: "介紹 SGLang：一套當許多請求有相同開頭（例如同樣的指示）時特別快的 serving 系統。"
+  engineering:
+    en: "RadixAttention keeps KV cache in a radix tree so shared prefixes are reused across requests automatically."
+    zh-TW: "RadixAttention 把 KV cache 存在 radix tree 中，讓不同請求之間共用的前綴能自動被重複使用。"
+  contributions:
+    en: "A frontend language for structured LLM programs and a runtime with automatic prefix reuse."
+    zh-TW: "一套用於結構化 LLM 程式的前端語言，以及能自動重用前綴的執行環境。"
+  practical:
+    en: "An alternative to vLLM with an OpenAI-compatible API; the lab's benchmark client can target it unchanged."
+    zh-TW: "vLLM 的替代方案，提供 OpenAI 相容的 API；lab 的 benchmark 用戶端不用修改就能測它。"
+  limitations:
+    en: "Prefix reuse helps only when prompts actually share prefixes."
+    zh-TW: "只有當提示詞真的有共同前綴時，前綴重用才有幫助。"
+
+- id: vllm-docs
+  title: "vLLM documentation"
+  authors: [vLLM project]
+  kind: documentation
+  version: "latest (developer preview) as fetched"
+  url: https://docs.vllm.ai/en/latest/
+  concepts: [serving-vs-local, paged-attention, batching, vram]
+  related_missions: [m04-build-your-server, m05-put-it-to-the-test]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, mentions_pagedattention, mentions_continuous_batching]}
+  beginner:
+    en: "The official manual for vLLM, a popular engine for serving language models fast on GPUs."
+    zh-TW: "vLLM 的官方手冊。vLLM 是一套熱門的推論引擎，用 GPU 快速提供語言模型服務。"
+  engineering:
+    en: "Covers the OpenAI-compatible server, engine arguments (--max-model-len, --gpu-memory-utilization), supported models and the Docker image."
+    zh-TW: "涵蓋 OpenAI 相容伺服器、引擎參數（--max-model-len、--gpu-memory-utilization）、支援的模型，以及 Docker 映像檔。"
+  contributions:
+    en: "Lists PagedAttention, continuous batching, chunked prefill and prefix caching among its features."
+    zh-TW: "功能包括 PagedAttention、continuous batching、chunked prefill 與 prefix caching。"
+  practical:
+    en: "Mission 04's optional vLLM path runs the official vllm/vllm-openai image; check the supported-models page before choosing a model."
+    zh-TW: "任務 04 的選做 vLLM 路徑會執行官方的 vllm/vllm-openai 映像檔；選模型前請先查看支援模型頁面。"
+  limitations:
+    en: "The 'latest' docs track the development branch; match the docs to the version you run."
+    zh-TW: "latest 文件追蹤的是開發分支；請對照你實際執行的版本閱讀文件。"
+
+- id: sglang-docs
+  title: "SGLang documentation"
+  authors: [SGLang project]
+  kind: documentation
+  url: https://docs.sglang.io/
+  concepts: [serving-vs-local, kv-cache]
+  related_missions: [m04-build-your-server]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, mentions_radixattention], note: "docs.sglang.ai redirects here"}
+  beginner:
+    en: "The official manual for SGLang, another high-performance engine for serving language and multimodal models."
+    zh-TW: "SGLang 的官方手冊。SGLang 是另一套高效能的推論引擎，可以提供語言與多模態模型服務。"
+  engineering:
+    en: "Describes RadixAttention, prefix caching, multi-GPU parallelism and OpenAI-compatible APIs across several hardware vendors."
+    zh-TW: "說明 RadixAttention、prefix caching、多 GPU 平行化，以及支援多家硬體廠商的 OpenAI 相容 API。"
+  contributions:
+    en: "Production-oriented serving with automatic prefix reuse."
+    zh-TW: "以正式環境為導向、能自動重用前綴的 serving。"
+  practical:
+    en: "Not yet wired into the lab's launcher; you can start it yourself and benchmark it with the same client."
+    zh-TW: "目前尚未整合進 lab 的啟動器；你可以自己啟動它，再用同一個用戶端做 benchmark。"
+  limitations:
+    en: "Feature set and flags change quickly; check the version-specific docs."
+    zh-TW: "功能和參數變動很快；請查看對應版本的文件。"
+
+- id: hf-transformers-docs
+  title: "Hugging Face Transformers documentation"
+  authors: [Hugging Face]
+  kind: documentation
+  version: "v5.20.2 (stable as fetched)"
+  url: https://huggingface.co/docs/transformers/index
+  concepts: [inference-pipeline, tokenizer, greedy-decoding, hardware-basics]
+  related_missions: [m01-meet-your-machine, m02-find-your-model, m03-wake-it-up]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, version]}
+  beginner:
+    en: "The manual for the Python library the lab uses to load models and generate text."
+    zh-TW: "lab 用來載入模型與生成文字的 Python 套件手冊。"
+  engineering:
+    en: "Covers AutoTokenizer, AutoModelForCausalLM, generate() and its decoding options, and the Pipeline API."
+    zh-TW: "涵蓋 AutoTokenizer、AutoModelForCausalLM、generate() 及其解碼選項，以及 Pipeline API。"
+  contributions:
+    en: "A common model-definition framework used by most open models on the Hub."
+    zh-TW: "Hub 上大多數開放模型共同使用的模型定義框架。"
+  practical:
+    en: "Mission 03 uses exactly these classes; View Source shows the calls."
+    zh-TW: "任務 03 使用的正是這些類別；「檢視原始碼」會顯示實際的呼叫。"
+  limitations:
+    en: "Optimized for flexibility, not high-concurrency serving."
+    zh-TW: "以彈性為優先，不是為高並行 serving 而最佳化。"
+
+- id: hf-model-cards
+  title: "Model Cards (Hugging Face Hub documentation)"
+  authors: [Hugging Face]
+  kind: documentation
+  url: https://huggingface.co/docs/hub/model-cards
+  concepts: [model-card]
+  related_missions: [m02-find-your-model]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, license_metadata]}
+  beginner:
+    en: "Explains the README of a model: what to write, and the metadata block at the top (license, tags, datasets)."
+    zh-TW: "說明模型的 README：應該寫什麼，以及最上方的中繼資料區塊（授權、標籤、資料集）。"
+  engineering:
+    en: "YAML front matter fields such as license, library_name, base_model, pipeline_tag and tags are machine-readable and power Hub filters."
+    zh-TW: "YAML front matter 中的 license、library_name、base_model、pipeline_tag、tags 等欄位都是機器可讀的，也是 Hub 篩選功能的基礎。"
+  contributions:
+    en: "A shared convention for documenting models."
+    zh-TW: "一套記錄模型資訊的共同慣例。"
+  practical:
+    en: "The Model Garage reads license and pipeline_tag from this metadata via the Hub API."
+    zh-TW: "模型車庫透過 Hub API 從這些中繼資料讀取授權與 pipeline_tag。"
+  limitations:
+    en: "Authors fill it in; it can be incomplete or wrong."
+    zh-TW: "內容由作者填寫，可能不完整或有錯。"
+
+- id: hf-hub-docs
+  title: "Hugging Face Hub API (OpenAPI reference)"
+  authors: [Hugging Face]
+  kind: documentation
+  url: https://huggingface.co/spaces/huggingface/openapi
+  concepts: [model-id]
+  related_missions: [m02-find-your-model]
+  verification: {method: fetched, date: 2026-10-23, checked: [docs_moved_notice], note: "huggingface.co/docs/hub/api states the endpoint reference moved here. The model-info call used by the lab (GET /api/models/{repo_id}?blobs=true) was confirmed in the huggingface_hub client source, HfApi.model_info."}
+  beginner:
+    en: "The web API behind the Hub website. The lab uses it to read model information without downloading the model."
+    zh-TW: "Hub 網站背後的網路 API。lab 用它在不下載模型的情況下讀取模型資訊。"
+  engineering:
+    en: "Model info includes sha (revision), siblings (files, with sizes when blobs=true), safetensors parameter counts, gated status and cardData."
+    zh-TW: "模型資訊包含 sha（版本）、siblings（檔案清單，加上 blobs=true 時含大小）、safetensors 參數量、gated 狀態與 cardData。"
+  contributions:
+    en: "Programmatic access to the same metadata as the website."
+    zh-TW: "以程式存取和網站相同的中繼資料。"
+  practical:
+    en: "See inference_lab/hub.py: inspect_model and summarize."
+    zh-TW: "請看 inference_lab/hub.py：inspect_model 與 summarize。"
+  limitations:
+    en: "Field availability varies per repo (e.g. parameter counts only for safetensors repos)."
+    zh-TW: "可用的欄位因 repo 而異（例如只有 safetensors repo 才有參數量）。"
+
+- id: safetensors-docs
+  title: "Safetensors documentation"
+  authors: [Hugging Face]
+  kind: documentation
+  url: https://huggingface.co/docs/safetensors/index
+  concepts: [safetensors]
+  related_missions: [m02-find-your-model]
+  verification: {method: fetched, date: 2026-10-23, checked: [title, safety_claim], note: "The header layout is shown as a diagram on the page; the lab's parser follows the format as implemented and tested in tests/test_local_model.py."}
+  beginner:
+    en: "A file format for model weights that is safe to open (unlike pickle) and fast to load."
+    zh-TW: "一種模型權重的檔案格式：可以安全開啟（不像 pickle），而且載入很快。"
+  engineering:
+    en: "Header length (8 bytes) + JSON header of tensor names, dtypes, shapes and offsets + raw data; supports zero-copy and partial loading."
+    zh-TW: "標頭長度（8 個位元組）+ 記錄 tensor 名稱、dtype、形狀與位移的 JSON 標頭 + 原始資料；支援零複製與部分載入。"
+  contributions:
+    en: "Removed the code-execution risk of pickle-based checkpoints."
+    zh-TW: "消除了以 pickle 為基礎的 checkpoint 可能執行程式碼的風險。"
+  practical:
+    en: "The lab downloads only safetensors files and counts parameters from their headers."
+    zh-TW: "lab 只下載 safetensors 檔案，並從它們的標頭計算參數量。"
+  limitations:
+    en: "Safe loading does not make the model's behaviour safe; it only removes code execution at load time."
+    zh-TW: "安全載入不代表模型的行為安全；它只排除了載入時執行程式碼的風險。"
+
+- id: collins-1989-cognitive-apprenticeship
+  title: "Cognitive Apprenticeship: Teaching the Crafts of Reading, Writing, and Mathematics"
+  authors: [Allan Collins, John Seely Brown, Susan E. Newman]
+  kind: book_chapter
+  year: 1989
+  venue: "In L. B. Resnick (Ed.), Knowing, Learning, and Instruction: Essays in Honor of Robert Glaser. Lawrence Erlbaum Associates."
+  url: https://doi.org/10.4324/9781315044408-14
+  concepts: []
+  related_missions: []
+  verification: {method: not_fetched, date: 2026-10-23, note: "Bibliographic details from memory of a widely cited work; the DOI link was not fetched from the build environment. Verify before citing."}
+  beginner:
+    en: "Learning a craft by watching an expert, trying with help, then doing it alone, with the expert's thinking made visible. Inference Lab's Observe, Guided and Expert modes follow this idea."
+    zh-TW: "學一門手藝的方式：先看專家做，再在協助下嘗試，最後自己完成，過程中讓專家的思考變得看得見。Inference Lab 的觀察、引導與專家三種模式就是依循這個概念。"
+  engineering:
+    en: "Methods named in the framework: modeling, coaching, scaffolding, fading, articulation, reflection and exploration."
+    zh-TW: "框架中提到的方法：示範（modeling）、指導（coaching）、鷹架（scaffolding）、逐步撤除（fading）、表達（articulation）、反思（reflection）與探索（exploration）。"
+  contributions:
+    en: "Applied apprenticeship ideas to cognitive skills where the expert's process is normally invisible."
+    zh-TW: "把師徒制的概念應用在通常看不見專家思考過程的認知技能上。"
+  practical:
+    en: "Observe mode = modeling; Guided mode with progressive hints = coaching and scaffolding; Expert mode and challenges = fading; the Engineering Journal = reflection."
+    zh-TW: "觀察模式 = 示範；有漸進提示的引導模式 = 指導與鷹架；專家模式與挑戰 = 逐步撤除；工程日誌 = 反思。"
+  limitations:
+    en: "A design framework, not a guarantee of learning outcomes; the lab does not measure learning gains."
+    zh-TW: "這是設計框架，不保證學習成效；lab 並沒有量測學習成果的提升。"

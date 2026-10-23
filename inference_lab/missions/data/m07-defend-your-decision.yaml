@@ -1,0 +1,73 @@
+id: m07-defend-your-decision
+number: 7
+version: 1.0.0
+title: {en: "Defend Your Decision", zh-TW: "為你的決策辯護"}
+tagline:
+  en: "Turn measurements into a recommendation someone else can check."
+  zh-TW: "把量測結果變成別人可以檢驗的建議。"
+objectives:
+  - {en: "Generate a report that states methodology, environment, results, limitations and provenance.", zh-TW: "產生一份說明方法、環境、結果、限制與資料來源的報告。"}
+  - {en: "Write your own decision and justify it with recorded evidence.", zh-TW: "寫下自己的決策，並用已記錄的證據支持它。"}
+  - {en: "Keep demo, failed and imported data out of claims they cannot support.", zh-TW: "不讓示範、失敗或匯入的資料出現在它們無法支持的結論裡。"}
+prerequisites: [m06-hunt-the-bottleneck]
+concepts: [provenance, benchmark-methodology]
+references: [mlperf-inference-2020]
+completion_evidence:
+  en: "A generated report that cites at least two measured experiments by id."
+  zh-TW: "一份產生出來的報告，以 ID 引用至少兩筆實測實驗。"
+steps:
+  - id: s1-report
+    title: {en: "Generate the engineering report", zh-TW: "產生工程報告"}
+    what:
+      en: "Builds a Markdown report from your baseline and candidate records. The lab writes methodology, environment, measured results, comparison and auto-detected limitations. The decision section is yours."
+      zh-TW: "根據你的基準與候選紀錄建立 Markdown 報告。lab 會寫出方法、環境、實測結果、比較，以及自動偵測到的限制；決策那一段由你自己寫。"
+    why:
+      en: "An engineering decision is only as good as the evidence someone else can verify."
+      zh-TW: "一個工程決策好不好，取決於別人能驗證的證據。"
+    concept: provenance
+    action: {id: report.generate, params: {experiment_ids: ["${m05-put-it-to-the-test:s2-baseline}", "${m06-hunt-the-bottleneck:s1-candidate}"], lang: en, decision: ""}, editable: [lang, decision]}
+    expected:
+      en: "A Markdown report saved under your lab folder, listing both experiment ids with their provenance."
+      zh-TW: "一份存放在 lab 資料夾中的 Markdown 報告，列出兩筆實驗的 ID 與其資料來源。"
+    checks:
+      - {id: ran, description: {en: "Report generated", zh-TW: "已產生報告"}, path: run.status, op: eq, value: succeeded}
+      - {id: claims, description: {en: "At least two measured experiments cited", zh-TW: "至少引用兩筆實測實驗"}, path: result.claimed_ids, op: len_gte, value: 2}
+      - {id: cmp, description: {en: "Comparison included", zh-TW: "包含比較"}, path: result.comparison.comparability, op: exists}
+    failure: {en: "Needs the records from Missions 05 and 06.", zh-TW: "需要任務 05 和 06 的紀錄。"}
+    hints:
+      - {en: "A good decision says what to do, under which conditions, and what would change your mind.", zh-TW: "好的決策會說明要做什麼、在什麼條件下，以及什麼情況會讓你改變想法。"}
+    sources:
+      - {file: inference_lab/reports.py, symbol: build_report}
+      - {file: inference_lab/provenance.py, symbol: CLAIMABLE}
+    reproduce:
+      en: "inference-lab report <baseline-id> <candidate-id> --lang en --decision \"...\""
+      zh-TW: "inference-lab report <baseline-id> <candidate-id> --lang zh-TW --decision \"...\""
+  - id: s2-provenance-check
+    title: {en: "Knowledge check: what can support a claim?", zh-TW: "觀念檢查：什麼可以支持結論？"}
+    what: {en: "Decide which records may back a performance claim.", zh-TW: "判斷哪些紀錄可以支持效能結論。"}
+    why: {en: "Mixing demo data with measurements is how misleading benchmarks are born.", zh-TW: "把示範資料和實測資料混在一起，就是誤導性 benchmark 的由來。"}
+    concept: provenance
+    expected: {en: "Choose the best answer.", zh-TW: "選出最好的答案。"}
+    failure: {en: "Read the explanation and try again.", zh-TW: "讀一下說明再試一次。"}
+    hints:
+      - {en: "Which labels mean 'this was actually measured'?", zh-TW: "哪些標籤代表「這是真的量出來的」？"}
+    quiz:
+      question:
+        en: "Which records can support a performance claim in a report?"
+        zh-TW: "哪些紀錄可以在報告中支持效能結論？"
+      options:
+        - {en: "LIVE_MEASURED and VERIFIED_IMPORTED", zh-TW: "LIVE_MEASURED 和 VERIFIED_IMPORTED"}
+        - {en: "Any record, including DEMO_SAMPLE, as long as the chart looks right", zh-TW: "任何紀錄都可以，包括 DEMO_SAMPLE，只要圖表看起來對"}
+        - {en: "FAILED records, because they show worst-case behaviour", zh-TW: "FAILED 紀錄，因為它們呈現了最差情況"}
+      answer: 0
+      explanation:
+        en: "Only measured data supports claims. Demo samples teach; failed and not-run records are listed for honesty but describe no performance."
+        zh-TW: "只有實測資料可以支持結論。示範資料用於教學；失敗與未執行的紀錄會為了誠實而列出，但不代表任何效能。"
+challenge:
+  prompt:
+    en: "Without hints: generate the same report in Traditional Chinese (zh-TW) with your own written decision."
+    zh-TW: "不看提示：用繁體中文（zh-TW）產生同一份報告，並附上你自己寫的決策。"
+  action: {id: report.generate, params: {experiment_ids: ["${m05-put-it-to-the-test:s2-baseline}", "${m06-hunt-the-bottleneck:s1-candidate}"], lang: en, decision: ""}, editable: [lang, decision]}
+  checks:
+    - {id: lang, description: {en: "Report language is zh-TW", zh-TW: "報告語言為 zh-TW"}, path: result.lang, op: eq, value: zh-TW}
+    - {id: decision, description: {en: "Decision written", zh-TW: "已寫下決策"}, path: run.params.decision, op: truthy}

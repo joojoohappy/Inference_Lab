@@ -1,0 +1,455 @@
+# Curated concept explanations. Four levels: simple -> logic -> design -> tradeoffs.
+# claim_type: established (well-documented fact) | implementation (how this code / a tool does it)
+#             | heuristic (engineering rule of thumb) | assumption (stated simplification)
+
+hardware-basics:
+  title: {en: "CPU, GPU, RAM and VRAM", zh-TW: "CPU、GPU、RAM 與 VRAM"}
+  keywords: [cpu, gpu, ram, vram, hardware, nvidia, driver, 硬體, 顯卡]
+  claim_type: established
+  references: [hf-transformers-docs]
+  analogy:
+    en: "The CPU is a few brilliant chefs; the GPU is thousands of line cooks doing the same chop at once. RAM is the pantry, VRAM is the counter right next to the cooks."
+    zh-TW: "CPU 像幾位很厲害的主廚；GPU 則像幾千個廚房助手同時做同一個切菜動作。RAM 是儲藏室，VRAM 是就在助手旁邊的工作檯。"
+  levels:
+    simple:
+      en: "A language model is mostly huge lists of numbers multiplied together. GPUs do many multiplications at the same time, so they run models much faster than CPUs. The numbers must sit in the GPU's own memory (VRAM) to be used quickly."
+      zh-TW: "語言模型大部分就是一大堆數字彼此相乘。GPU 可以同時做很多乘法，所以跑模型比 CPU 快很多。這些數字必須放在 GPU 自己的記憶體（VRAM）裡，才能被快速使用。"
+    logic:
+      en: "Generating each token reads every weight once. Speed is therefore limited by how fast memory can deliver weights (memory bandwidth) and how many multiply-adds per second the chip can do. GPUs lead on both."
+      zh-TW: "每生成一個 token，都要把所有權重讀過一次。所以速度受限於記憶體送出權重的速度（記憶體頻寬），以及晶片每秒能做多少次乘加運算。GPU 在這兩方面都領先。"
+    design:
+      en: "Inference Lab discovers hardware with fixed commands (nvidia-smi query, docker version, Python imports) and derives capabilities deterministically. Missions use these capabilities to decide which paths are available instead of failing later."
+      zh-TW: "Inference Lab 用固定的指令（nvidia-smi 查詢、docker version、Python 匯入）來偵測硬體，並以確定性的方式推導出能力。任務會根據這些能力判斷哪些路徑可用，而不是等到之後才失敗。"
+    tradeoffs:
+      en: "nvidia-smi only sees NVIDIA GPUs; AMD (ROCm) and Apple Silicon need other tools. CPU inference is slower but needs no special hardware and is fine for small models and learning."
+      zh-TW: "nvidia-smi 只看得到 NVIDIA GPU；AMD（ROCm）和 Apple Silicon 需要其他工具。CPU 推論比較慢，但不需要特殊硬體，對小模型和學習來說已經足夠。"
+
+vram:
+  title: {en: "VRAM: what must fit", zh-TW: "VRAM：什麼東西必須放得下"}
+  keywords: [vram, memory, oom, out of memory, 記憶體, 顯存]
+  claim_type: established
+  references: [kwon-2023-pagedattention]
+  analogy:
+    en: "A suitcase: weights are the clothes you must bring; the KV cache is souvenirs that pile up during the trip."
+    zh-TW: "就像行李箱：權重是一定要帶的衣服；KV cache 則是旅途中越買越多的紀念品。"
+  levels:
+    simple:
+      en: "VRAM holds the model's weights, the KV cache (memory of the conversation so far), and temporary working space. If they do not fit, the model will not load or will crash with 'out of memory'."
+      zh-TW: "VRAM 裝著模型權重、KV cache（到目前為止的對話記憶），以及暫時的工作空間。放不下時，模型就載入不了，或會以「out of memory」當掉。"
+    logic:
+      en: "Weights ≈ parameters × bytes per parameter (2 for bf16). KV cache ≈ 2 × layers × KV heads × head size × bytes × tokens. Weights are fixed; KV cache grows with context length and number of concurrent requests."
+      zh-TW: "權重 ≈ 參數量 × 每個參數的位元組數（bf16 是 2）。KV cache ≈ 2 × 層數 × KV heads × head 大小 × 位元組數 × token 數。權重是固定的；KV cache 會隨著上下文長度和並行請求數增加。"
+    design:
+      en: "The lab's estimate adds a 20% + 0.5 GB overhead heuristic and lists every assumption next to the number, so you can see why it may differ from reality."
+      zh-TW: "lab 的估算會加上「20% + 0.5 GB」的經驗額外開銷，並把每個前提假設列在數字旁邊，讓你知道它為什麼可能和實際不同。"
+    tradeoffs:
+      en: "vLLM pre-allocates most free VRAM for the KV cache (--gpu-memory-utilization), so nvidia-smi shows it 'full' even when idle. That is by design, not a leak."
+      zh-TW: "vLLM 會預先配置大部分可用 VRAM 給 KV cache（--gpu-memory-utilization），所以就算閒置，nvidia-smi 也會顯示「滿了」。這是刻意的設計，不是記憶體洩漏。"
+
+model-id:
+  title: {en: "Model IDs and revisions", zh-TW: "模型 ID 與版本"}
+  keywords: [model id, repo, revision, sha, hugging face, hub]
+  claim_type: implementation
+  references: [hf-hub-docs]
+  levels:
+    simple:
+      en: "On Hugging Face every model has an ID like owner/name, for example HuggingFaceTB/SmolLM2-135M-Instruct. It points to a Git repository of files."
+      zh-TW: "在 Hugging Face 上，每個模型都有一個像 owner/name 這樣的 ID，例如 HuggingFaceTB/SmolLM2-135M-Instruct。它指向一個裝著檔案的 Git repository。"
+    logic:
+      en: "Because it is a Git repo, files can change. The commit hash (revision / sha) identifies the exact files you used. Experiments record it so results stay comparable."
+      zh-TW: "因為它是 Git repo，檔案可能會改變。commit hash（revision / sha）可以指出你用的到底是哪一版檔案。實驗會記錄它，讓結果保持可比較。"
+    design:
+      en: "The lab validates IDs with a strict pattern and only accepts https://huggingface.co model URLs, so user input can never become an arbitrary URL or path."
+      zh-TW: "lab 用嚴格的規則驗證 ID，而且只接受 https://huggingface.co 的模型網址，所以使用者輸入永遠不會變成任意的網址或路徑。"
+    tradeoffs:
+      en: "Pinning a revision guarantees reproducibility but you will not get upstream fixes until you update it deliberately."
+      zh-TW: "固定 revision 能保證可重現性，但在你刻意更新之前，就拿不到上游的修正。"
+
+model-card:
+  title: {en: "Model Cards, licenses and gating", zh-TW: "Model Card、授權與 gated 存取"}
+  keywords: [model card, license, gated, readme, 授權]
+  claim_type: established
+  references: [hf-model-cards]
+  levels:
+    simple:
+      en: "A Model Card is the README of a model: what it is for, how it was trained, its limits and its license. Some models are 'gated': you must accept terms before downloading."
+      zh-TW: "Model Card 就是模型的 README：它的用途、怎麼訓練的、有什麼限制，以及授權方式。有些模型是 gated 的：下載前必須先同意條款。"
+    logic:
+      en: "The license decides whether you may use the model commercially. The card's metadata (license, tags, pipeline_tag) is machine-readable, which is how the lab can show it."
+      zh-TW: "授權決定你能不能把模型拿來商用。Model Card 的中繼資料（license、tags、pipeline_tag）是機器可讀的，所以 lab 才能顯示它們。"
+    design:
+      en: "The lab reports gating and license but never bypasses gating: it uses your own HF_TOKEN only if you set it, and refuses downloads of gated models from the UI."
+      zh-TW: "lab 會回報 gated 狀態與授權，但絕不繞過 gated 限制：只有在你自己設定 HF_TOKEN 時才會使用，而且不會從介面下載 gated 模型。"
+    tradeoffs:
+      en: "Metadata can be incomplete or wrong. Always read the license text itself before production use."
+      zh-TW: "中繼資料可能不完整或有錯。用於正式環境之前，一定要讀授權條文本身。"
+
+parameters-memory:
+  title: {en: "Parameters and memory estimates", zh-TW: "參數量與記憶體估算"}
+  keywords: [parameters, params, size, billion, estimate, 參數]
+  claim_type: heuristic
+  references: [kwon-2023-pagedattention, dettmers-2022-int8]
+  levels:
+    simple:
+      en: "A 1-billion-parameter model stored in 16-bit numbers needs about 2 GB just for the weights. Bigger number, more memory."
+      zh-TW: "一個 10 億參數、以 16 位元數字儲存的模型，光是權重就需要大約 2 GB。數字越大，需要的記憶體越多。"
+    logic:
+      en: "memory ≈ params × bytes/param + KV cache + overhead. The lab shows each term separately so you see which one dominates."
+      zh-TW: "記憶體 ≈ 參數量 × 每個參數的位元組數 + KV cache + 額外開銷。lab 會分開顯示每一項，讓你看出哪一項占最多。"
+    design:
+      en: "Estimates are labelled ESTIMATE and come with assumptions. Measured memory from benchmarks is labelled LIVE_MEASURED. The two are never mixed."
+      zh-TW: "估算值會標示為 ESTIMATE，並附上前提假設。benchmark 量到的記憶體則標示為 LIVE_MEASURED。兩者絕不混用。"
+    tradeoffs:
+      en: "Quantization (8-bit, 4-bit) cuts weight memory 2–4× at some quality and sometimes speed cost."
+      zh-TW: "量化（8 位元、4 位元）可以把權重記憶體減少 2 到 4 倍，代價是一些品質，有時也包括速度。"
+
+tokenizer:
+  title: {en: "Tokenizers", zh-TW: "Tokenizer（分詞器）"}
+  keywords: [tokenizer, token, bpe, vocab, chat template, 分詞]
+  claim_type: established
+  references: [hf-transformers-docs]
+  analogy:
+    en: "Like breaking LEGO creations back into standard bricks the model knows."
+    zh-TW: "就像把樂高作品拆回模型認得的標準積木。"
+  levels:
+    simple:
+      en: "Models do not read letters. A tokenizer cuts text into pieces (tokens) and turns each into a number (token id). The model predicts the next number; the tokenizer turns numbers back into text."
+      zh-TW: "模型不讀字母。tokenizer 會把文字切成小片段（token），並把每個片段變成一個數字（token id）。模型預測下一個數字，再由 tokenizer 把數字變回文字。"
+    logic:
+      en: "Byte-level BPE starts from bytes and merges frequent pairs. 'Ġ' marks a leading space. Chinese text often uses more tokens per character than English, which affects cost and speed."
+      zh-TW: "byte-level BPE 從位元組開始，把常一起出現的組合合併。「Ġ」代表前面有空白。中文每個字使用的 token 數常常比英文多，這會影響成本和速度。"
+    design:
+      en: "Chat models also have a chat template that wraps messages in special tokens. Using the wrong template is a common cause of strange output."
+      zh-TW: "對話模型還有 chat template，會用特殊 token 把訊息包起來。套錯 template 是輸出很奇怪的常見原因。"
+    tradeoffs:
+      en: "Larger vocabularies shorten sequences but enlarge the embedding matrix."
+      zh-TW: "詞彙表越大，序列越短，但 embedding 矩陣也越大。"
+
+safetensors:
+  title: {en: "safetensors vs pickle weights", zh-TW: "safetensors 與 pickle 權重"}
+  keywords: [safetensors, pickle, bin, security, remote code, trust_remote_code]
+  claim_type: established
+  references: [safetensors-docs]
+  levels:
+    simple:
+      en: "Model weights are files. .safetensors files only contain numbers. Older .bin files use Python pickle, which can run code when opened."
+      zh-TW: "模型權重就是檔案。.safetensors 檔案只裝數字；舊的 .bin 檔案使用 Python pickle，打開時可能會執行程式碼。"
+    logic:
+      en: "A safetensors file starts with 8 bytes giving the header length, then a JSON header listing each tensor's dtype, shape and byte offsets, then raw data. You can count parameters from the header alone."
+      zh-TW: "safetensors 檔案開頭是 8 個位元組，記錄標頭長度；接著是 JSON 標頭，列出每個 tensor 的 dtype、形狀和位元組位置；最後是原始資料。光看標頭就能算出參數量。"
+    design:
+      en: "Inference Lab downloads only safetensors, loads with trust_remote_code=False, and refuses models that need remote code."
+      zh-TW: "Inference Lab 只下載 safetensors，以 trust_remote_code=False 載入，並拒絕需要遠端程式碼的模型。"
+    tradeoffs:
+      en: "Some new architectures exist only as remote code at first. The lab trades access to them for safety; you can still review and run them yourself outside the lab."
+      zh-TW: "有些新架構一開始只有遠端程式碼版本。lab 用無法使用它們換取安全；你仍然可以自己審查後在 lab 之外執行。"
+
+inference-pipeline:
+  title: {en: "The inference pipeline", zh-TW: "推論流程"}
+  keywords: [inference, generate, forward, pipeline, decode, 推論]
+  claim_type: established
+  references: [vaswani-2017, hf-transformers-docs]
+  levels:
+    simple:
+      en: "Inference = text → tokens → the model scores every possible next token → pick one → add it → repeat → turn tokens back into text."
+      zh-TW: "推論 = 文字 → token → 模型替每個可能的下一個 token 打分數 → 選一個 → 接上去 → 重複 → 把 token 變回文字。"
+    logic:
+      en: "The first pass processes the whole prompt (prefill). Each later pass processes one new token (decode) and reuses earlier work through the KV cache."
+      zh-TW: "第一次會處理整段提示詞（prefill）。之後每次只處理一個新 token（decode），並透過 KV cache 重複利用之前的計算。"
+    design:
+      en: "run_inference timestamps every generated token with a stopping-criteria callback, so TTFT and TPOT are measured in-process, not estimated."
+      zh-TW: "run_inference 透過 stopping-criteria 回呼替每個生成的 token 記錄時間，所以 TTFT 和 TPOT 是在程序內實際量到的，不是估計值。"
+    tradeoffs:
+      en: "Transformers' generate() is simple and flexible but not optimized for serving many users; that is what vLLM and SGLang are for."
+      zh-TW: "Transformers 的 generate() 簡單又有彈性，但不是為了同時服務大量使用者而最佳化的；那是 vLLM 和 SGLang 的工作。"
+
+greedy-decoding:
+  title: {en: "Greedy decoding and sampling", zh-TW: "Greedy 解碼與取樣"}
+  keywords: [greedy, sampling, temperature, decoding, repeat]
+  claim_type: established
+  references: [hf-transformers-docs]
+  levels:
+    simple:
+      en: "Greedy decoding always picks the most likely next token. It is repeatable: same input, same output."
+      zh-TW: "greedy 解碼永遠挑最可能的下一個 token。它是可重現的：同樣的輸入，就有同樣的輸出。"
+    logic:
+      en: "Sampling picks randomly according to the probabilities (temperature controls how random). Greedy can get stuck repeating a token, especially with weak models."
+      zh-TW: "取樣則依照機率隨機挑選（temperature 控制隨機程度）。greedy 可能會卡在同一個 token 一直重複，模型越弱越容易發生。"
+    design:
+      en: "The lab uses greedy decoding for measurements so runs are deterministic and comparable."
+      zh-TW: "lab 量測時使用 greedy 解碼，讓每次執行都是確定的、可以互相比較。"
+    tradeoffs:
+      en: "Greedy is best for reproducibility, not for creative or natural-sounding text."
+      zh-TW: "greedy 最適合追求可重現性，但不適合需要創意或自然口吻的文字。"
+
+serving-vs-local:
+  title: {en: "Local inference vs serving", zh-TW: "本機推論與 serving"}
+  keywords: [serving, server, api, local, vllm, endpoint, 伺服器]
+  claim_type: established
+  references: [vllm-docs, sglang-docs]
+  levels:
+    simple:
+      en: "Local inference: your script loads the model and asks one question. Serving: a program keeps the model loaded and answers many people over HTTP."
+      zh-TW: "本機推論：你的腳本載入模型、問一個問題。serving：一個程式把模型一直載入著，透過 HTTP 回答很多人的問題。"
+    logic:
+      en: "A server adds new problems: queueing, fairness, batching requests together, health checks, timeouts and memory for many conversations at once."
+      zh-TW: "伺服器會帶來新的問題：排隊、公平性、把請求合併成 batch、健康檢查、逾時，以及同時保存許多對話所需的記憶體。"
+    design:
+      en: "The lab's mini server speaks the same OpenAI-compatible /v1/completions API as vLLM, so the benchmark code is identical for both."
+      zh-TW: "lab 的 mini server 和 vLLM 一樣使用 OpenAI 相容的 /v1/completions API，所以兩者的 benchmark 程式碼完全相同。"
+    tradeoffs:
+      en: "A server costs memory and a running process even when idle, in exchange for low per-request overhead."
+      zh-TW: "伺服器即使閒置也會占用記憶體和一個執行中的程序，換來每個請求的低額外成本。"
+
+health-check:
+  title: {en: "Health checks", zh-TW: "健康檢查"}
+  keywords: [health, healthy, readiness, liveness, 健康]
+  claim_type: implementation
+  references: [vllm-docs]
+  levels:
+    simple:
+      en: "A health check is a tiny request (GET /health) that answers 'I am alive and ready'."
+      zh-TW: "健康檢查是一個很小的請求（GET /health），用來回答「我還活著，而且準備好了」。"
+    logic:
+      en: "A process can exist but not be ready (still loading weights). The lab waits for HTTP 200 and also watches whether the process died, so a crash is reported instead of waited on forever."
+      zh-TW: "程序可能存在但還沒準備好（還在載入權重）。lab 會等待 HTTP 200，同時監看程序是否已結束，所以當掉時會被回報，而不是一直等下去。"
+    design:
+      en: "Stuck detection uses heartbeats (log lines, progress updates) and process state, not elapsed time alone."
+      zh-TW: "卡住偵測使用心跳訊號（紀錄、進度更新）和程序狀態，而不是只看經過了多久。"
+    tradeoffs:
+      en: "A health check proves the server answers, not that its answers are correct or fast."
+      zh-TW: "健康檢查只證明伺服器有回應，不代表它的回答正確或快速。"
+
+batching:
+  title: {en: "Batching and continuous batching", zh-TW: "Batching 與 continuous batching"}
+  keywords: [batch, batching, continuous batching, queue, throughput]
+  claim_type: established
+  references: [kwon-2023-pagedattention, vllm-docs]
+  analogy:
+    en: "A bus vs a taxi: the bus carries many passengers per trip. Continuous batching lets passengers get on and off at every stop."
+    zh-TW: "公車對上計程車：公車每趟載很多乘客。continuous batching 則讓乘客可以在每一站上下車。"
+  levels:
+    simple:
+      en: "Batching processes several requests together, so the GPU does more useful work per step."
+      zh-TW: "batching 是把好幾個請求一起處理，讓 GPU 每一步都做更多有用的工作。"
+    logic:
+      en: "Decoding one token reads all the weights. With a batch, those weights are read once and used for every request in it, so throughput rises much faster than cost."
+      zh-TW: "解碼一個 token 要讀完所有權重。有了 batch，權重只讀一次就能用在 batch 裡的每個請求，所以吞吐量上升的速度遠比成本快。"
+    design:
+      en: "Continuous batching (used by vLLM, SGLang) adds and removes requests from the running batch at every step instead of waiting for the whole batch to finish."
+      zh-TW: "continuous batching（vLLM、SGLang 都有使用）會在每一步把請求加入或移出正在執行的 batch，而不是等整批完成。"
+    tradeoffs:
+      en: "Bigger batches raise throughput but can increase each request's latency and KV-cache memory."
+      zh-TW: "batch 越大，吞吐量越高，但每個請求的延遲和 KV cache 記憶體也可能增加。"
+
+kv-cache:
+  title: {en: "KV cache", zh-TW: "KV cache"}
+  keywords: [kv cache, key, value, attention, cache, context]
+  claim_type: established
+  references: [vaswani-2017, kwon-2023-pagedattention, pope-2022-scaling]
+  analogy:
+    en: "Notes you keep while reading a book, so you don't re-read every earlier page to understand the next sentence."
+    zh-TW: "就像讀書時做的筆記，讓你不用為了理解下一句話而把前面每一頁都重讀一遍。"
+  levels:
+    simple:
+      en: "To write the next word, the model looks back at all earlier words. The KV cache saves that 'look-back' information so it isn't recomputed every time."
+      zh-TW: "為了寫出下一個字，模型會回頭看前面所有的字。KV cache 把這些「回頭看」需要的資訊存起來，所以不用每次重算。"
+    logic:
+      en: "Each layer stores a key and a value vector per token. Memory grows linearly with tokens and with concurrent requests, and often limits how many users fit on one GPU."
+      zh-TW: "每一層會替每個 token 存一個 key 向量和一個 value 向量。記憶體會隨 token 數和並行請求數線性增加，常常是限制一張 GPU 能服務多少使用者的關鍵。"
+    design:
+      en: "Grouped-query attention (num_key_value_heads < num_attention_heads) shrinks the KV cache; the lab's estimate uses num_key_value_heads when the config provides it."
+      zh-TW: "grouped-query attention（num_key_value_heads < num_attention_heads）可以縮小 KV cache；如果 config 有提供 num_key_value_heads，lab 的估算就會使用它。"
+    tradeoffs:
+      en: "Caching trades memory for compute. Longer contexts make it the dominant memory cost."
+      zh-TW: "快取是用記憶體換計算。上下文越長，它就越會成為最主要的記憶體成本。"
+
+paged-attention:
+  title: {en: "PagedAttention", zh-TW: "PagedAttention"}
+  keywords: [pagedattention, paged, vllm, fragmentation, blocks]
+  claim_type: established
+  references: [kwon-2023-pagedattention, vllm-docs]
+  levels:
+    simple:
+      en: "PagedAttention stores the KV cache in small fixed-size blocks, like pages in a notebook, instead of one big reserved chunk per request."
+      zh-TW: "PagedAttention 把 KV cache 存在小小的固定大小區塊裡，就像筆記本的一頁一頁，而不是替每個請求預留一大塊。"
+    logic:
+      en: "Reserving the maximum length for every request wastes memory. Blocks are allocated only as tokens are produced, so far less memory is wasted and more requests fit in a batch."
+      zh-TW: "替每個請求預留最大長度會浪費記憶體。區塊只在產生 token 時才配置，因此浪費少很多，一個 batch 也能放進更多請求。"
+    design:
+      en: "Kwon et al. (SOSP 2023) introduced it in vLLM, borrowing virtual-memory paging ideas from operating systems; blocks can also be shared between requests with a common prefix."
+      zh-TW: "Kwon 等人（SOSP 2023）在 vLLM 中提出這個方法，借用了作業系統虛擬記憶體分頁的概念；有相同前綴的請求還可以共用區塊。"
+    tradeoffs:
+      en: "It needs custom attention kernels that read non-contiguous memory. The paper reports throughput gains versus contemporary systems; exact gains depend on workload and hardware."
+      zh-TW: "它需要能讀取不連續記憶體的自訂 attention kernel。論文報告了相對於當時系統的吞吐量提升；實際提升幅度取決於工作負載和硬體。"
+
+ttft:
+  title: {en: "TTFT: time to first token", zh-TW: "TTFT：第一個 token 的時間"}
+  keywords: [ttft, first token, latency, prefill, 延遲]
+  claim_type: established
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "TTFT is how long you wait before the first word appears."
+      zh-TW: "TTFT 是你要等多久，第一個字才會出現。"
+    logic:
+      en: "TTFT = time in queue + time to process the prompt (prefill) + time to generate the first token. Long prompts and busy servers both increase it."
+      zh-TW: "TTFT = 排隊時間 + 處理提示詞（prefill）的時間 + 生成第一個 token 的時間。提示詞很長或伺服器很忙，都會讓它變大。"
+    design:
+      en: "The benchmark measures TTFT on the wire: the time from sending the request until the first non-empty streamed chunk arrives."
+      zh-TW: "benchmark 是在網路上量 TTFT：從送出請求到收到第一段非空的串流內容為止。"
+    tradeoffs:
+      en: "Prioritizing TTFT (small batches, fast prefill) can lower overall throughput."
+      zh-TW: "優先降低 TTFT（小 batch、快速 prefill）可能會降低整體吞吐量。"
+
+tpot:
+  title: {en: "TPOT: time per output token", zh-TW: "TPOT：每個輸出 token 的時間"}
+  keywords: [tpot, itl, inter-token, decode, speed]
+  claim_type: established
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "TPOT is how fast text appears after it starts: the 'typing speed'."
+      zh-TW: "TPOT 是文字開始出現後的速度，也就是「打字速度」。"
+    logic:
+      en: "TPOT = (end-to-end latency − TTFT) / (output tokens − 1). It reflects the decode phase."
+      zh-TW: "TPOT =（端到端延遲 − TTFT）/（輸出 token 數 − 1），反映的是解碼階段。"
+    design:
+      en: "With streaming, the lab could also record each gap (inter-token latency); it keeps the simpler average per request."
+      zh-TW: "有串流時，lab 也可以記錄每個 token 之間的間隔（inter-token latency）；目前保留比較簡單的每請求平均值。"
+    tradeoffs:
+      en: "Larger batches usually raise TPOT a little while raising total throughput a lot."
+      zh-TW: "batch 變大時，TPOT 通常會稍微上升，但總吞吐量會大幅提升。"
+
+percentiles:
+  title: {en: "P50, P95, P99", zh-TW: "P50、P95、P99"}
+  keywords: [p50, p95, p99, percentile, median, tail, 百分位]
+  claim_type: established
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "Sort all request times. P50 is the middle one. P95 is the time 95% of requests beat."
+      zh-TW: "把所有請求的時間排序。P50 是中間那個；P95 則是 95% 的請求都比它快的那個時間。"
+    logic:
+      en: "Averages are pulled by outliers and hide the slow tail. Service-level objectives are usually written as percentiles."
+      zh-TW: "平均值會被極端值拉動，也會把慢的長尾藏起來。服務等級目標（SLO）通常是用百分位數來訂的。"
+    design:
+      en: "The lab computes percentiles with linear interpolation between closest ranks and reports them per trial, then the median across trials."
+      zh-TW: "lab 用最接近排名之間的線性內插計算百分位數，先算每一輪的，再取各輪的中位數。"
+    tradeoffs:
+      en: "P99 needs many samples to be stable; with 8 requests per trial, treat P95/P99 as rough."
+      zh-TW: "P99 需要很多樣本才會穩定；每輪只有 8 個請求時，P95/P99 只能當作粗略參考。"
+
+concurrency:
+  title: {en: "Concurrency", zh-TW: "並行數（concurrency）"}
+  keywords: [concurrency, parallel, users, load, 並行]
+  claim_type: established
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "Concurrency is how many requests are in flight at the same time, like how many customers are at the counter."
+      zh-TW: "並行數是同時有多少請求正在處理中，就像櫃台前同時有幾位客人。"
+    logic:
+      en: "In a closed loop, each simulated user sends a new request as soon as the previous one finishes. Raising concurrency reveals whether the server batches work or makes requests queue."
+      zh-TW: "在封閉迴圈中，每個模擬使用者在前一個請求完成後就立刻送出下一個。提高並行數可以看出伺服器是會把工作合併成 batch，還是讓請求排隊。"
+    design:
+      en: "bench.run uses closed-loop workers. Open-loop (fixed arrival rate) testing is a different scenario, closer to real traffic, and is on the roadmap."
+      zh-TW: "bench.run 使用封閉迴圈的 worker。開放迴圈（固定到達速率）是另一種更接近真實流量的情境，列在開發藍圖中。"
+    tradeoffs:
+      en: "Closed-loop tests can never overload a server beyond its concurrency, so they hide what happens under traffic spikes."
+      zh-TW: "封閉迴圈測試永遠不會讓伺服器超過設定的並行數，所以看不出流量突然暴增時會發生什麼。"
+
+latency-throughput:
+  title: {en: "Latency vs throughput", zh-TW: "延遲與吞吐量"}
+  keywords: [latency, throughput, tradeoff, tokens per second, 吞吐量]
+  claim_type: established
+  references: [pope-2022-scaling, kwon-2023-pagedattention]
+  levels:
+    simple:
+      en: "Latency is how long one person waits. Throughput is how many people are served per second. Improving one can hurt the other."
+      zh-TW: "延遲是一個人要等多久；吞吐量是每秒能服務多少人。改善其中一個，可能會傷害另一個。"
+    logic:
+      en: "Batching more requests raises throughput but each request shares the hardware, so its latency grows. The right point depends on your product's latency target."
+      zh-TW: "把更多請求合併成 batch 可以提高吞吐量，但每個請求要共用硬體，延遲就會增加。最適合的平衡點取決於產品的延遲目標。"
+    design:
+      en: "The Experiment Arena plots both against concurrency so you can find the 'knee' where throughput stops growing but latency keeps rising."
+      zh-TW: "實驗競技場會把兩者對並行數畫成圖，讓你找出「膝點」：吞吐量不再成長、延遲卻持續上升的位置。"
+    tradeoffs:
+      en: "Cost per token falls with throughput; user experience depends on latency. Engineering is choosing the balance explicitly."
+      zh-TW: "每個 token 的成本會隨吞吐量下降；使用者體驗則取決於延遲。工程的工作就是明確地選出平衡點。"
+
+benchmark-methodology:
+  title: {en: "Benchmark methodology", zh-TW: "Benchmark 方法論"}
+  keywords: [benchmark, warmup, trials, methodology, reproducible, 方法]
+  claim_type: established
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "A fair test: warm up first, repeat several times, keep everything the same except what you are testing, and write down the conditions."
+      zh-TW: "公平的測試：先暖機、重複多次、除了要測的東西之外其他都保持一樣，並把條件記錄下來。"
+    logic:
+      en: "Warm-up removes one-time costs (loading, compilation, caches). Repeated trials show variance. Fixed output length (ignore_eos) makes requests comparable."
+      zh-TW: "暖機可以排除一次性成本（載入、編譯、快取）。重複多輪可以看出變異。固定輸出長度（ignore_eos）讓請求之間可以比較。"
+    design:
+      en: "Every benchmark record stores model revision, hardware fingerprint, engine version, workload parameters and raw per-request samples, so it can be re-analysed later."
+      zh-TW: "每筆 benchmark 紀錄都會保存模型版本、硬體指紋、引擎版本、工作負載參數，以及每個請求的原始樣本，之後可以重新分析。"
+    tradeoffs:
+      en: "MLPerf defines strict scenarios and run rules for comparability across vendors; this lab's lighter method is for learning and local decisions, not published claims."
+      zh-TW: "MLPerf 定義了嚴格的情境與執行規則，讓不同廠商的結果可以比較；本 lab 較輕量的方法是用於學習與本地決策，不適合拿來發表結論。"
+
+bottleneck-method:
+  title: {en: "Finding bottlenecks scientifically", zh-TW: "用科學方法找瓶頸"}
+  keywords: [bottleneck, hypothesis, experiment, variable, 瓶頸, 假設]
+  claim_type: heuristic
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "Guess what is slow, change one thing, measure again, and see if your guess was right."
+      zh-TW: "猜猜看什麼東西慢，改一件事，再量一次，看看你猜得對不對。"
+    logic:
+      en: "A hypothesis names a metric, a direction and a mechanism. If the difference falls within run-to-run noise, you cannot claim an effect."
+      zh-TW: "一個假設要說出指標、方向和機制。如果差異落在執行間的雜訊範圍內，就不能宣稱有效果。"
+    design:
+      en: "The comparison lists every differing variable and flags overlapping min–max ranges as possible noise."
+      zh-TW: "比較功能會列出所有不同的變因，並把最小到最大範圍重疊的情況標示為可能的雜訊。"
+    tradeoffs:
+      en: "Overlapping ranges is a simple, conservative test, not a formal statistical test; with few trials it can miss small real effects."
+      zh-TW: "範圍是否重疊是一種簡單又保守的判斷，不是正式的統計檢定；輪數很少時，可能會漏掉小而真實的效果。"
+
+provenance:
+  title: {en: "Provenance of numbers", zh-TW: "數字的來源（provenance）"}
+  keywords: [provenance, demo, measured, imported, honest, 來源]
+  claim_type: implementation
+  references: [mlperf-inference-2020]
+  levels:
+    simple:
+      en: "Every number in the lab has a label saying where it came from: measured here, imported and verified, demo, not run, or failed."
+      zh-TW: "lab 裡的每個數字都有標籤，說明它從哪裡來：在這裡量的、匯入並驗證過的、示範用的、未執行的，或失敗的。"
+    logic:
+      en: "Only LIVE_MEASURED and VERIFIED_IMPORTED may support claims. Imports are verified by schema and checksum."
+      zh-TW: "只有 LIVE_MEASURED 和 VERIFIED_IMPORTED 可以支持結論。匯入的資料會透過 schema 和 checksum 驗證。"
+    design:
+      en: "Reports split claimed records from excluded ones; demo charts carry a visible DEMO_SAMPLE badge."
+      zh-TW: "報告會把可主張的紀錄和被排除的紀錄分開；示範圖表會帶有明顯的 DEMO_SAMPLE 標記。"
+    tradeoffs:
+      en: "A checksum proves a record was not edited after export, not that the original measurement was done well."
+      zh-TW: "checksum 只能證明紀錄在匯出後沒有被修改，不能證明原本的量測做得好。"
+
+quantization:
+  title: {en: "Quantization", zh-TW: "量化（quantization）"}
+  keywords: [quantization, int8, int4, gptq, awq, 量化]
+  claim_type: established
+  references: [dettmers-2022-int8, frantar-2022-gptq]
+  levels:
+    simple:
+      en: "Quantization stores numbers with fewer bits (8 or 4 instead of 16), so the model takes less memory."
+      zh-TW: "量化是用更少的位元（8 或 4 位元，而不是 16 位元）來儲存數字，讓模型占用更少記憶體。"
+    logic:
+      en: "Fewer bytes per weight means less memory and less data to move per token, which often speeds up decoding, with some accuracy loss."
+      zh-TW: "每個權重的位元組變少，代表記憶體更少、每個 token 要搬動的資料也更少，常常能加快解碼，但會損失一些準確度。"
+    design:
+      en: "LLM.int8() handles outlier features separately; GPTQ quantizes weights post-training using approximate second-order information."
+      zh-TW: "LLM.int8() 會把離群特徵分開處理；GPTQ 則在訓練後利用近似的二階資訊來量化權重。"
+    tradeoffs:
+      en: "Quality loss varies by model and task and must be measured. Not every engine supports every format."
+      zh-TW: "品質損失會因模型和任務而異，必須實際量測。不是每個引擎都支援每種格式。"
