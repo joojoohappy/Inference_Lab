@@ -21,7 +21,9 @@ dependencies = [
 [project.optional-dependencies]
 # Real local inference with Hugging Face Transformers (CPU works; GPU optional).
 inference = ["torch>=2.2", "transformers>=4.40", "tokenizers>=0.15", "safetensors>=0.4"]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "httpx>=0.27"]
+# Optional AI tutor provider (the lab works fully without it).
+tutor = ["anthropic>=0.70"]
 
 [project.scripts]
 inference-lab = "inference_lab.cli:main"

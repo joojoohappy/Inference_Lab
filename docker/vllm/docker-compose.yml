@@ -1,0 +1,23 @@
+# Optional GPU path for Mission 04 step 4. NOT tested in the build environment (no GPU there).
+# Requires: NVIDIA GPU, NVIDIA Container Toolkit, Docker Compose v2.
+# The port is bound to 127.0.0.1 only. HF_TOKEN is passed through from your shell if set; it is never stored.
+# Same container the lab's `server.start kind=vllm` action launches (see inference_lab/serving/manager.py:vllm_argv).
+services:
+  vllm:
+    image: ${INFERENCE_LAB_VLLM_IMAGE:-vllm/vllm-openai:latest}
+    container_name: inference-lab-vllm
+    command: ["--model", "${MODEL:-Qwen/Qwen2.5-0.5B-Instruct}", "--max-model-len", "2048", "--gpu-memory-utilization", "0.85"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    ipc: host
+    environment:
+      - HF_TOKEN
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
