@@ -10,6 +10,15 @@ time, and defend a decision with evidence. Every number is labelled with where i
 
 ![The Lab](docs/screenshots/en-lab.png)
 
+## Demo video
+
+[![Inference Lab demo video (3:33)](docs/media/demo-poster.jpg)](docs/media/inference-lab-demo.mp4)
+
+A 3½-minute tour with bilingual captions: hardware scan, all seven missions run for real, Experiment Arena,
+Model Garage, Code Explorer, Research Archive and the Engineering Journal, plus measured llama.cpp results from a
+Snapdragon X Plus laptop (CPU 33.0 tok/s vs Adreno GPU 17.8 tok/s; vLLM shown as NOT RUN, no GPU).
+The UI walkthrough was recorded in a CPU-only cloud sandbox, with waits for compute cut or sped up.
+
 ## Quick start (CPU, works offline)
 
 Requirements: Python 3.10+ (tested 3.13), Node 20+ (tested 22) to build the UI.
