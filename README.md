@@ -12,7 +12,13 @@ time, and defend a decision with evidence. Every number is labelled with where i
 
 ## Demo video
 
-[![Inference Lab demo video (3:33)](docs/media/demo-poster.jpg)](https://github.com/joojoohappy/Inference_Lab/blob/main/docs/media/inference-lab-demo-720p.mp4)
+[![Inference Lab demo video (3:33)](docs/media/demo-poster.jpg)]
+
+
+
+https://github.com/user-attachments/assets/a956d596-b720-46dc-a088-afa59c20190b
+
+
 
 A 3½-minute tour with bilingual captions: hardware scan, all seven missions run for real, Experiment Arena,
 Model Garage, Code Explorer, Research Archive and the Engineering Journal, plus measured llama.cpp results from a
