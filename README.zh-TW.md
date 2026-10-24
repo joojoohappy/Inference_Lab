@@ -9,6 +9,14 @@ benchmark、閱讀實際執行的程式碼、一次只改一個變數做比較�
 
 ![實驗室](docs/screenshots/zh-TW-lab.png)
 
+## 示範影片
+
+[![Inference Lab 示範影片（3:33）](docs/media/demo-poster.jpg)](docs/media/inference-lab-demo.mp4)
+
+三分半的導覽影片，附中英雙語字幕：硬體掃描、七個任務全部實際執行、Experiment Arena、Model Garage、Code Explorer、
+Research Archive 與 Engineering Journal，以及在 Snapdragon X Plus 筆電上的 llama.cpp 實測結果（CPU 33.0 tok/s，
+Adreno GPU 17.8 tok/s；vLLM 因為沒有 GPU 標示為 NOT RUN）。介面操作畫面是在只有 CPU 的雲端環境錄製的，等待運算的時間有剪掉或加速。
+
 ## 快速開始（CPU，可離線）
 
 需求：Python 3.10 以上（已在 3.13 測試）、Node 20 以上（已在 22 測試，用來建置 UI）。
