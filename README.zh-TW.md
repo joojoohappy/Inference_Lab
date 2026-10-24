@@ -17,9 +17,6 @@ https://github.com/user-attachments/assets/87d40f50-78f2-4b11-9b2d-35761728d2e1
 
 
 
-三分半的導覽影片，附中英雙語字幕：硬體掃描、七個任務全部實際執行、Experiment Arena、Model Garage、Code Explorer、
-Research Archive 與 Engineering Journal，以及在 Snapdragon X Plus 筆電上的 llama.cpp 實測結果（CPU 33.0 tok/s，
-Adreno GPU 17.8 tok/s；vLLM 因為沒有 GPU 標示為 NOT RUN）。介面操作畫面是在只有 CPU 的雲端環境錄製的，等待運算的時間有剪掉或加速。
 
 ## 快速開始（CPU，可離線）
 
