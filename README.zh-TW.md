@@ -11,7 +11,10 @@ benchmark、閱讀實際執行的程式碼、一次只改一個變數做比較�
 
 ## 示範影片
 
-[![Inference Lab 示範影片（3:33）](docs/media/demo-poster.jpg)](https://github.com/joojoohappy/Inference_Lab/blob/main/docs/media/inference-lab-demo-720p.mp4)
+[![Inference Lab 示範影片（3:33）](docs/media/demo-poster.jpg)]
+https://github.com/user-attachments/assets/87d40f50-78f2-4b11-9b2d-35761728d2e1
+
+
 
 三分半的導覽影片，附中英雙語字幕：硬體掃描、七個任務全部實際執行、Experiment Arena、Model Garage、Code Explorer、
 Research Archive 與 Engineering Journal，以及在 Snapdragon X Plus 筆電上的 llama.cpp 實測結果（CPU 33.0 tok/s，
