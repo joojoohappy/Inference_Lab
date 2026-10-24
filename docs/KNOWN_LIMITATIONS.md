@@ -7,7 +7,7 @@
 | GPU inference, vLLM serving (Mission 03 s4, Mission 04 s4), GPU tests | No NVIDIA GPU (the cloud VM had none; the owner's Snapdragon X laptop has an Adreno GPU, which vLLM does not support) | Implemented; reported **NOT RUN**. vLLM argv and compose file are untested on real hardware; the image's CLI flags may need adjusting for a given vLLM release |
 | Hugging Face Hub inspection and downloads | `huggingface.co` blocked by the build network | **Verified 2026-10-24** on the owner's laptop: live inspect, approval gate, and a 260 MiB download (SmolLM2-135M-Instruct) |
 | AI tutor providers (Anthropic SDK, local OpenAI-compatible) | No API key and no `anthropic` package installed; no paid calls were made | Code written against the official SDK; never called. The curated tutor is fully tested |
-| App Docker image (`Dockerfile`) | No Docker daemon | Not built |
+| App Docker image (`Dockerfile`) | No Docker daemon in the original build VM | **Built and health-checked in CI** (GitHub Actions `docker` job: image build, then `GET /api/health` on 127.0.0.1). The model-running paths inside the container are not exercised there |
 | The requester's original benchmark repository | Found later at `llmbench/llm-inference-bench` | **Integrated**: llama.cpp CPU / Adreno engines reuse its binaries and GGUF models (`inference_lab/integrations/llmbench.py`) |
 
 ## Design limits
