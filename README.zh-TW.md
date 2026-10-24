@@ -12,7 +12,7 @@ benchmark、閱讀實際執行的程式碼、一次只改一個變數做比較�
 ## 示範影片
 
 [![Inference Lab 示範影片（3:33）](docs/media/demo-poster.jpg)]
-https://github.com/user-attachments/assets/87d40f50-78f2-4b11-9b2d-35761728d2e1
+(https://github.com/user-attachments/assets/87d40f50-78f2-4b11-9b2d-35761728d2e1)
 
 
 
