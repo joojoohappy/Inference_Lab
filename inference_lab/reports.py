@@ -1,7 +1,8 @@
 """Engineering report generation (Mission 07). Deterministic: same records in, same report out.
 
 Rules enforced here:
-  * Only LIVE_MEASURED and VERIFIED_IMPORTED numbers appear under "Measured results".
+  * Only LIVE_MEASURED numbers appear under "Measured results".
+  * IMPORTED records (schema and checksum consistent, origin not verified) get their own labelled section.
   * DEMO_SAMPLE, NOT_RUN and FAILED records are listed separately with their label.
   * Every number is followed by the id of the experiment it came from.
   * Limitations are derived from the records themselves (trial count, hardware, model).
@@ -14,7 +15,7 @@ from typing import Any
 
 from .experiments import compare_records
 from .i18n import t
-from .provenance import is_claimable
+from .provenance import is_claimable, is_imported
 
 
 def _fmt(x: Any, nd: int = 1) -> str:
@@ -32,6 +33,8 @@ def _limitations(recs: list[dict[str, Any]], lang: str) -> list[str]:
         out.append(t(lang, "report.lim.random_model"))
     if any((r.get("engine") or {}).get("name") == "inference-lab-mini" for r in benches):
         out.append(t(lang, "report.lim.mini_server"))
+    if any(is_imported(r["provenance"]) for r in recs):
+        out.append(t(lang, "report.lim.imported"))
     out.append(t(lang, "report.lim.single_machine"))
     return out
 
@@ -49,13 +52,16 @@ def _observations(cmp: dict[str, Any], lang: str) -> list[str]:
 
 def build_report(recs: list[dict[str, Any]], lang: str = "en", decision: str | None = None) -> dict[str, Any]:
     claim = [r for r in recs if is_claimable(r["provenance"])]
-    excluded = [r for r in recs if not is_claimable(r["provenance"])]
+    imported = [r for r in recs if is_imported(r["provenance"])]
+    excluded = [r for r in recs if not is_claimable(r["provenance"]) and not is_imported(r["provenance"])]
+    shown = claim + imported
     L: list[str] = [f"# {t(lang, 'report.title')}", "",
                     f"_{t(lang, 'report.generated', when=time.strftime('%Y-%m-%d %H:%M:%S'))}_", ""]
 
     L += [f"## {t(lang, 'report.methodology')}", "", t(lang, "report.methodology_body"), ""]
     benches = [r for r in claim if r["kind"] == "benchmark"]
-    for r in benches:
+    imported_benches = [r for r in imported if r["kind"] == "benchmark"]
+    for r in benches + imported_benches:
         p = r.get("params") or {}
         L.append(f"- `{r['id']}`: concurrency={p.get('concurrency')}, max_tokens={p.get('max_tokens')}, "
                  f"num_requests={p.get('num_requests')}, warmup={p.get('warmup_requests')}, trials={p.get('trials')}")
@@ -63,7 +69,7 @@ def build_report(recs: list[dict[str, Any]], lang: str = "en", decision: str | N
 
     L += [f"## {t(lang, 'report.environment')}", ""]
     seen = set()
-    for r in claim:
+    for r in shown:
         hw = r.get("hardware") or {}
         key = str(hw)
         if key in seen or not hw:
@@ -71,7 +77,7 @@ def build_report(recs: list[dict[str, Any]], lang: str = "en", decision: str | N
         seen.add(key)
         L.append(f"- CPU: {hw.get('cpu_model')} ({hw.get('logical_cores')} threads), RAM {hw.get('ram_total_gb')} GB, "
                  f"GPU: {', '.join(hw.get('gpus') or []) or t(lang, 'report.none')}")
-    for r in claim:
+    for r in shown:
         e, m = r.get("engine") or {}, r.get("model") or {}
         if e or m:
             L.append(f"- `{r['id']}`: model `{m.get('id')}` @ `{m.get('revision')}`, engine {e.get('name')} {e.get('version')}")
@@ -80,26 +86,17 @@ def build_report(recs: list[dict[str, Any]], lang: str = "en", decision: str | N
     L += [f"## {t(lang, 'report.results')}", ""]
     if not claim:
         L += [t(lang, "report.no_measurements"), ""]
-    for r in benches:
-        a = (r.get("result") or {}).get("aggregate") or {}
-        L += [f"### `{r['id']}` [{r['provenance']}]", "",
-              f"| {t(lang, 'report.metric')} | median | min | max |", "|---|---|---|---|"]
-        for k, v in a.items():
-            L.append(f"| {k} | {_fmt(v.get('median'), 2)} | {_fmt(v.get('min'), 2)} | {_fmt(v.get('max'), 2)} |")
-        res = (r.get("result") or {}).get("resources") or {}
-        L += ["", f"- server_rss_mb_peak: {_fmt(res.get('server_rss_mb_peak'))}; "
-                  f"gpu_vram_used_mb_peak: {_fmt(res.get('gpu_vram_used_mb_peak'))}", ""]
-    for r in [x for x in claim if x["kind"] == "inference"]:
-        tm = (r.get("result") or {}).get("timing") or {}
-        L.append(f"- `{r['id']}` [{r['provenance']}] inference: load {_fmt(tm.get('load_ms'))} ms, "
-                 f"TTFT {_fmt(tm.get('ttft_ms'))} ms, TPOT {_fmt(tm.get('tpot_ms'), 2)} ms, "
-                 f"{_fmt(tm.get('output_tokens_per_s'))} tok/s")
-    L.append("")
+    L += _result_lines(claim, lang)
+    if imported:
+        L += [f"## {t(lang, 'report.imported')}", "", t(lang, "report.imported_body"), ""]
+        L += _result_lines(imported, lang)
 
     comparison = None
-    if len(benches) >= 2:
-        comparison = compare_records(benches[-1], benches[0]) if benches[0]["created_at"] > benches[-1]["created_at"] \
-            else compare_records(benches[0], benches[-1])
+    cmp_benches = benches + imported_benches
+    if len(cmp_benches) >= 2:
+        first, last = cmp_benches[0], cmp_benches[-1]
+        comparison = compare_records(last, first) if first["created_at"] > last["created_at"] \
+            else compare_records(first, last)
         c = comparison["comparability"]
         L += [f"## {t(lang, 'report.comparison')}", "",
               t(lang, "report.cmp_header", baseline=comparison["baseline_id"], candidate=comparison["candidate_id"]),
@@ -122,4 +119,25 @@ def build_report(recs: list[dict[str, Any]], lang: str = "en", decision: str | N
     for r in recs:
         L.append(f"| `{r['id']}` | {r['kind']} | {r['provenance']} | `{r.get('checksum', '')[:12]}` |")
     return {"markdown": "\n".join(L) + "\n", "claimed_ids": [r["id"] for r in claim],
+            "imported_ids": [r["id"] for r in imported],
             "excluded_ids": [r["id"] for r in excluded], "comparison": comparison, "lang": lang}
+
+
+def _result_lines(recs: list[dict[str, Any]], lang: str) -> list[str]:
+    L: list[str] = []
+    for r in [x for x in recs if x["kind"] == "benchmark"]:
+        a = (r.get("result") or {}).get("aggregate") or {}
+        L += [f"### `{r['id']}` [{r['provenance']}]", "",
+              f"| {t(lang, 'report.metric')} | median | min | max |", "|---|---|---|---|"]
+        for k, v in a.items():
+            L.append(f"| {k} | {_fmt(v.get('median'), 2)} | {_fmt(v.get('min'), 2)} | {_fmt(v.get('max'), 2)} |")
+        res = (r.get("result") or {}).get("resources") or {}
+        L += ["", f"- server_rss_mb_peak: {_fmt(res.get('server_rss_mb_peak'))}; "
+                  f"gpu_vram_used_mb_peak: {_fmt(res.get('gpu_vram_used_mb_peak'))}", ""]
+    for r in [x for x in recs if x["kind"] == "inference"]:
+        tm = (r.get("result") or {}).get("timing") or {}
+        L.append(f"- `{r['id']}` [{r['provenance']}] inference: load {_fmt(tm.get('load_ms'))} ms, "
+                 f"TTFT {_fmt(tm.get('ttft_ms'))} ms, TPOT {_fmt(tm.get('tpot_ms'), 2)} ms, "
+                 f"{_fmt(tm.get('output_tokens_per_s'))} tok/s")
+    L.append("")
+    return L

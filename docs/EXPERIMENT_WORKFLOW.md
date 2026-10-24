@@ -27,8 +27,15 @@ inference-lab report <baseline-id> <candidate-id> --lang zh-TW
 3. **Trials.** The whole load is repeated `trials` times. The aggregate is the **median across trials**, with min and max.
 4. **Per request.** Streamed `/v1/completions` with `ignore_eos` so output length is fixed. TTFT = first streamed
    token; TPOT = (E2E − TTFT) / (tokens − 1); E2E = full response.
+   A request **succeeds** only with HTTP 200, at least one generated text chunk and the closing `data: [DONE]`.
+   A stream that ends early (`incomplete_stream`), carries no text (`empty_stream`), contains unparseable JSON
+   (`malformed_chunk`) or an error object (`server_error_in_stream`) is a failure and counts toward the error rate.
+   Output tokens come from the server's `usage.completion_tokens`. Chunks are not tokens (one chunk can carry
+   several), so when a server reports no usage the trial records `token_count_source: "chunks"` and leaves TPOT
+   and tokens/s empty.
 5. **Percentiles.** Linear interpolation between closest ranks (same as NumPy's default).
-6. **Throughput.** Successful requests and output tokens divided by the trial's wall time.
+6. **Throughput.** Successful requests and output tokens divided by the trial's wall time (tokens/s only when
+   every successful request reported usage).
 7. **Resources.** The server process's RSS and CPU% are sampled during the run (and GPU memory via `nvidia-smi` when present).
 8. **Record.** Model id + revision, engine + version, hardware fingerprint, params, environment (Python, packages,
    git commit), raw per-request samples, checksum, and the learner's notes.
@@ -37,7 +44,12 @@ inference-lab report <baseline-id> <candidate-id> --lang zh-TW
 
 `experiments.comparability` lists every difference between two records (model, revision, hardware, engine, engine
 version, each workload parameter). A comparison is "clean" only when exactly one thing changed and both sides are
-measured. Each metric shows % change, better/worse, and whether the trial ranges overlap ("may be noise").
+measured here. Imported records (`imported_unverified`) and unknown model revisions or engine versions
+(`unknown_model_revision`, `unknown_engine_version`) are warnings that make a comparison not clean: an unknown
+value is a limitation, not a match. The check is field-level; it cannot see settings the record does not store
+(server flags beyond those listed, background load, thermal state), so treat "comparable" as necessary, not
+sufficient. Each metric shows % change, better/worse, and whether the trial ranges overlap ("may be noise").
+Overlap is a noise hint, not a significance test.
 
 ## Example result from the build machine (4 vCPU, no GPU, tiny random model, mini server)
 

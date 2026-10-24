@@ -8,6 +8,11 @@ Methodology (see docs/EXPERIMENT_WORKFLOW.md):
   3. every request is streamed so TTFT is observed on the wire;
   4. trials repeat so run-to-run spread is visible;
   5. resource usage (server RSS/CPU, GPU memory) is sampled during trials.
+
+A request counts as successful only if it returns HTTP 200, streams at least one generated text chunk and
+ends with the `data: [DONE]` marker. Output tokens come from the server's `usage.completion_tokens`; when a
+server does not report usage, the sample says so and token-based metrics (TPOT, tokens/s) are left empty
+rather than guessed from chunk counts (one chunk can carry several tokens).
 """
 
 from __future__ import annotations
@@ -115,6 +120,7 @@ async def _one(client: httpx.AsyncClient, cfg: BenchConfig) -> RequestSample:
     ttft = None
     chunks = 0
     usage_tokens = None
+    done = False
     try:
         async with client.stream("POST", cfg.base_url + "/v1/completions", json=body, timeout=cfg.timeout_s) as r:
             if r.status_code != 200:
@@ -124,28 +130,41 @@ async def _one(client: httpx.AsyncClient, cfg: BenchConfig) -> RequestSample:
                 if not line.startswith("data: "):
                     continue
                 data = line[6:]
-                if data == "[DONE]":
+                if data.strip() == "[DONE]":
+                    done = True
                     break
                 try:
                     obj = json.loads(data)
                 except ValueError:
-                    continue
-                if obj.get("usage"):
-                    usage_tokens = obj["usage"].get("completion_tokens")
+                    return RequestSample(start, None, ttft, chunks, error="malformed_chunk")
+                if not isinstance(obj, dict):
+                    return RequestSample(start, None, ttft, chunks, error="malformed_chunk")
+                if obj.get("error"):
+                    return RequestSample(start, None, ttft, chunks, error="server_error_in_stream")
+                usage = obj.get("usage")
+                if isinstance(usage, dict) and isinstance(usage.get("completion_tokens"), int):
+                    usage_tokens = usage["completion_tokens"]
                 for ch in obj.get("choices") or []:
-                    if ch.get("text"):
+                    if isinstance(ch, dict) and ch.get("text"):
                         chunks += 1
                         if ttft is None:
                             ttft = time.perf_counter() - start
         end = time.perf_counter()
-        return RequestSample(start, end, ttft, usage_tokens if usage_tokens is not None else chunks)
+        if not done:
+            return RequestSample(start, None, ttft, chunks, error="incomplete_stream")
+        if chunks == 0 or (usage_tokens is not None and usage_tokens <= 0):
+            return RequestSample(start, None, ttft, chunks, error="empty_stream")
+        if usage_tokens is None:
+            return RequestSample(start, end, ttft, chunks, tokens_exact=False)
+        return RequestSample(start, end, ttft, usage_tokens)
     except httpx.TimeoutException:
         return RequestSample(start, None, ttft, chunks, error="timeout")
     except httpx.HTTPError as e:
         return RequestSample(start, None, ttft, chunks, error=type(e).__name__)
 
 
-async def _trial(cfg: BenchConfig, n: int) -> tuple[list[RequestSample], float]:
+async def _trial(cfg: BenchConfig, n: int,
+                 should_stop: Callable[[], bool] = lambda: False) -> tuple[list[RequestSample], float]:
     samples: list[RequestSample] = []
     remaining = n
     lock = asyncio.Lock()
@@ -156,7 +175,7 @@ async def _trial(cfg: BenchConfig, n: int) -> tuple[list[RequestSample], float]:
             nonlocal remaining
             while True:
                 async with lock:
-                    if remaining <= 0:
+                    if remaining <= 0 or should_stop():
                         return
                     remaining -= 1
                 samples.append(await _one(client, cfg))
@@ -168,13 +187,18 @@ async def _trial(cfg: BenchConfig, n: int) -> tuple[list[RequestSample], float]:
 
 def run_benchmark(cfg: BenchConfig, server_pid: int | None = None,
                   log: Callable[[str], None] = lambda _: None,
-                  progress: Callable[[float], None] = lambda _: None) -> dict[str, Any]:
+                  progress: Callable[[float], None] = lambda _: None,
+                  should_stop: Callable[[], bool] = lambda: False) -> dict[str, Any]:
+    """Run warm-up and trials. `should_stop` is polled before every request and between trials so a
+    cancelled or timed-out run stops sending load instead of running to the end."""
     cfg.validate()
     started = time.time()
     if cfg.warmup_requests:
         log(f"warm-up: {cfg.warmup_requests} request(s), results discarded")
-        warm, _ = asyncio.run(_trial(BenchConfig(**{**asdict(cfg), "concurrency": 1}), cfg.warmup_requests))
+        warm, _ = asyncio.run(_trial(BenchConfig(**{**asdict(cfg), "concurrency": 1}), cfg.warmup_requests, should_stop))
         bad = [s for s in warm if not s.ok]
+        if should_stop():
+            return {"config": asdict(cfg), "started_at": started, "aborted": "cancelled", "trials": []}
         if len(bad) == len(warm):
             log(f"warm-up failed: every request errored ({bad[0].error}); aborting")
             return {"config": asdict(cfg), "started_at": started, "aborted": "warmup_failed",
@@ -182,11 +206,17 @@ def run_benchmark(cfg: BenchConfig, server_pid: int | None = None,
     trials, raw = [], []
     with ResourceSampler(server_pid) as sampler:
         for i in range(cfg.trials):
+            if should_stop():
+                log(f"stopped before trial {i + 1}: run was cancelled or timed out")
+                return {"config": asdict(cfg), "started_at": started, "aborted": "cancelled", "trials": trials}
             log(f"trial {i + 1}/{cfg.trials}: {cfg.num_requests} requests at concurrency {cfg.concurrency}")
-            samples, wall = asyncio.run(_trial(cfg, cfg.num_requests))
+            samples, wall = asyncio.run(_trial(cfg, cfg.num_requests, should_stop))
             s = summarize(samples, wall)
             log(f"  ok={s['succeeded']} failed={s['failed']} ttft_p50={_f(s['ttft_ms']['p50'])}ms "
                 f"e2e_p95={_f(s['e2e_ms']['p95'])}ms out_tps={_f(s['output_throughput_tps'])}")
+            if s["token_count_source"] != "usage" and s["succeeded"]:
+                log("  server did not report usage.completion_tokens for every request: TPOT and tokens/s are "
+                    "left empty (chunk counts are not token counts)", "warn")
             trials.append(s)
             raw.append([x.to_row() for x in samples])
             progress((i + 1) / cfg.trials)
@@ -198,7 +228,7 @@ def run_benchmark(cfg: BenchConfig, server_pid: int | None = None,
         "aggregate": aggregate_trials(trials),
         "resources": sampler.summary(),
         "raw_samples": raw,
-        "raw_columns": ["start_s", "end_s", "ttft_s", "output_tokens", "error"],
+        "raw_columns": ["start_s", "end_s", "ttft_s", "output_tokens", "error", "tokens_exact"],
     }
 
 

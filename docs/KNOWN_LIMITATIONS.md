@@ -21,8 +21,21 @@
 * Memory estimates are heuristics (weights + 20% + 0.5 GB + KV cache). Activations and engine pre-allocation are not modelled.
 * Quiz answer indices are included in the mission data sent to the browser. Completion is still checked on the
   server, but a curious learner could read the answer. This is a learning tool, not an exam.
-* Progress is per data directory and single-user. There is no authentication; the server relies on binding to
-  127.0.0.1 and a Host-header guard.
+* Progress is per data directory and single-user. There is no authentication, no per-user data and no job
+  quota; the server relies on binding to 127.0.0.1. The Host-header guard stops DNS rebinding from web pages but
+  is not access control. `inference-lab ui` refuses a non-loopback address unless `--allow-remote` is given.
+  Do not expose it on a network; a multi-user deployment would need authentication, per-user storage, quotas
+  and isolated workers first.
+* Imported records are checked for schema and checksum consistency only. A checksum is not a signature, so
+  imports are labelled `IMPORTED`, never claimed as measurements, and flagged in comparisons.
+* Timeouts and cancellation are cooperative (worker threads, not processes). A stopped run is marked failed at
+  once and benchmarks / server start stop at their next check, but a single `generate` call or a download in
+  progress runs to completion in the background and its result is discarded. Moving heavy work to killable
+  worker processes is on the roadmap.
+* Comparability is checked per recorded field. Settings that are not recorded (all server flags, background
+  load, GPU clocks) cannot be compared, and llama.cpp GGUF models have no recorded revision.
+* Mission "complete" means every required step passed its checks. It shows the workflow was done, not that the
+  learner can explain the result or transfer it to a new problem; the hint-free challenge is a separate field.
 * Only `en` and `zh-TW` are provided. Adding a language needs a new locale file in both `inference_lab/locales/`
   and `frontend/src/locales/` (the checks will list missing keys).
 * Research registry: 14 of 15 records were fetched and checked on 2026-10-23. Collins et al. (1989) could not be

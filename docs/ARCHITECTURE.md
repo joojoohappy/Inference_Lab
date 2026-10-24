@@ -29,7 +29,7 @@ fixed set of **allowlisted actions**. Everything the UI can do, the CLI can do t
 | Module | Responsibility |
 |---|---|
 | `config.py` | Settings from env vars; data dir `~/.inference-lab` (override `INFERENCE_LAB_HOME`) |
-| `provenance.py` | `LIVE_MEASURED`, `VERIFIED_IMPORTED`, `DEMO_SAMPLE`, `NOT_RUN`, `FAILED`; only the first two are claimable |
+| `provenance.py` | `LIVE_MEASURED`, `IMPORTED`, `DEMO_SAMPLE`, `NOT_RUN`, `FAILED`; only `LIVE_MEASURED` is claimable (`IMPORTED` is shown apart; legacy `VERIFIED_IMPORTED` records are read as `IMPORTED`) |
 | `hardware.py` | Fixed, read-only probes (CPU, RAM, `nvidia-smi` query, `docker version`, Python imports, Hub reachability); derives capabilities |
 | `memory.py` | Labelled memory **estimates** with explicit assumptions; compatibility verdicts |
 | `hub.py` | Model ID/URL validation; Hub metadata via the documented model-info API; download plan (safetensors only; refuses remote code, gated, pickle-only) |
@@ -37,7 +37,7 @@ fixed set of **allowlisted actions**. Everything the UI can do, the CLI can do t
 | `local_model.py` | Reads safetensors headers to count parameters exactly |
 | `serving/` | Mini OpenAI-compatible server (CPU) and the vLLM container argv; process lifecycle |
 | `bench/` | Closed-loop async load generator, resource sampler, percentile math, trial aggregation, comparison |
-| `experiments.py` | Record schema v1, checksum, append-only store, verified import, comparability |
+| `experiments.py` | Record schema v1, result + whole-record checksums (integrity, not authenticity), append-only store, import, comparability |
 | `reports.py` | Markdown reports (en / zh-TW) that only claim measured records |
 | `missions/` | Pydantic schema, YAML missions, check evaluation, persisted progress, mastery |
 | `tutor/` | Curated concept/code explanations, optional AI provider, secret redaction, evidence-based suggestions |

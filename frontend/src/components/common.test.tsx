@@ -4,7 +4,7 @@ import "../i18n";
 import { ProvenanceBadge, StatusBadge, fmt } from "./common";
 
 describe("provenance badges", () => {
-  it.each(["LIVE_MEASURED", "VERIFIED_IMPORTED", "DEMO_SAMPLE", "NOT_RUN", "FAILED"])("%s renders a distinct labelled badge", (p) => {
+  it.each(["LIVE_MEASURED", "IMPORTED", "DEMO_SAMPLE", "NOT_RUN", "FAILED"])("%s renders a distinct labelled badge", (p) => {
     render(<ProvenanceBadge value={p} />);
     const el = document.querySelector(`[data-provenance="${p}"]`)!;
     expect(el).toBeInTheDocument();

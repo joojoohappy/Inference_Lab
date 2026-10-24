@@ -30,8 +30,8 @@ for (const f of files) {
 
 // Dynamic families: t(`prefix.${x}`) — list the values the backend/data can produce.
 const families = {
-  "provenance.*.label": ["LIVE_MEASURED", "VERIFIED_IMPORTED", "DEMO_SAMPLE", "NOT_RUN", "FAILED"],
-  "provenance.*.help": ["LIVE_MEASURED", "VERIFIED_IMPORTED", "DEMO_SAMPLE", "NOT_RUN", "FAILED"],
+  "provenance.*.label": ["LIVE_MEASURED", "IMPORTED", "DEMO_SAMPLE", "NOT_RUN", "FAILED"],
+  "provenance.*.help": ["LIVE_MEASURED", "IMPORTED", "DEMO_SAMPLE", "NOT_RUN", "FAILED"],
   "status.*": ["pending", "running", "succeeded", "failed", "blocked", "not_run", "verified", "check_failed", "not_started"],
   "approval.*": ["model_download_uses_network_and_disk", "vllm_uses_gpu_and_pulls_container_image", "large_benchmark"],
   "areas.*.name": ["lab", "garage", "missions", "code", "research", "arena", "journal"],

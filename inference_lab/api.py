@@ -153,6 +153,12 @@ def create_app(lab: Lab | None = None, progress: Progress | None = None) -> Fast
             raise HTTPException(404, "run not found")
         return asdict(r)
 
+    @app.post("/api/runs/{run_id}/cancel")
+    def cancel_run(run_id: str) -> dict[str, Any]:
+        if run_id not in lab.runs:
+            raise HTTPException(404, "run not found")
+        return asdict(lab.cancel(run_id))
+
     @app.get("/api/runs/{run_id}/diagnosis")
     def run_diagnosis(run_id: str, lang: str = "en") -> dict[str, Any]:
         r = lab.runs.get(run_id)

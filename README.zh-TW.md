@@ -54,12 +54,17 @@ inference-lab ui            # → http://127.0.0.1:8765
 | 標示 | 意義 |
 |---|---|
 | `LIVE_MEASURED`（現場實測） | 在這台機器上由這個 repository 的程式碼量測 |
-| `VERIFIED_IMPORTED`（已驗證匯入） | 從結構與 checksum 都驗證過的檔案匯入 |
+| `IMPORTED`（匯入，來源未驗證） | 從結構正確、checksum 相符的檔案匯入；**來源沒有經過驗證** |
 | `DEMO_SAMPLE`（示範資料） | 教學用的合成資料，絕不當作證據 |
 | `NOT_RUN`（未執行） | 沒有執行（通常是缺少 GPU 等能力） |
 | `FAILED`（失敗） | 有執行但失敗；會保留並顯示 |
 
-報告只會把「現場實測」和「已驗證匯入」的結果當作結論。
+報告只會把「現場實測」的結果當作結論。checksum 相符只代表匯入的檔案在匯出後沒被改過，不能證明數字真的量測過，
+因為任何人都能自己寫一筆紀錄再算出 checksum。所以匯入的紀錄會在報告中另列一節並標示，比較時也會出現警告。
+要採用別人的 benchmark，請先在自己的機器上重跑。
+
+benchmark 請求必須回傳 HTTP 200、串流出生成文字，並以 `[DONE]` 結尾，才算成功。token 數取自伺服器回報的 `usage`；
+伺服器沒有回報時，TPOT 和 tokens/s 會留空，不會用 chunk 數來估計。
 
 ## 命令列
 
@@ -94,6 +99,21 @@ inference-lab bench --kind llamacpp-adreno --model gguf:qwen3-4b-instruct-2507-Q
 
 實驗競技場也有這兩個引擎。在 Snapdragon X 筆電上的實測結果請見 [docs/LOCAL_TEST_REPORT.md](docs/LOCAL_TEST_REPORT.md)。
 
+## 部署：單一使用者、只在本機
+
+Inference Lab 是本機、單一使用者的工作台，**沒有身分驗證、沒有每人資料隔離、也沒有工作配額**：任何連得到這個
+port 的人都能讀取你的實驗、啟動耗資源的工作、重設你的進度。Host header 檢查只能擋網頁發起的 DNS rebinding，
+不是存取控制。
+
+* 預設只監聽 `127.0.0.1`。若要綁定其他位址，`inference-lab ui` 必須加上 `--allow-remote`
+  （或設定 `INFERENCE_LAB_ALLOW_REMOTE=1`），否則會拒絕啟動。
+* 使用 Docker 時只發布到 loopback：`docker run -p 127.0.0.1:8765:8765 ...`。
+* 不要放到公開網路或公開的反向代理後面。若要給多人使用，必須先做身分驗證、每人資料隔離、工作配額與隔離的 worker。
+
+每個動作都有時間上限。超過上限，或呼叫 `POST /api/runs/{id}/cancel` 時，這次執行會立即標為失敗，
+較長的動作（benchmark、啟動伺服器）會在下一個檢查點停止。單次 `generate` 或已經開始的下載無法中斷，
+會在背景跑完，但結果會被捨棄。同時最多執行 `INFERENCE_LAB_MAX_CONCURRENT_RUNS` 個動作（預設 4）。
+
 ## 選用的 AI 家教
 
 不需要任何付費 API，家教也能運作（使用人工整理的解說和 docstring）。若要接上模型，請看英文 README 的
@@ -102,11 +122,15 @@ inference-lab bench --kind llamacpp-adreno --model gguf:qwen3-4b-instruct-2507-Q
 ## 測試
 
 ```bash
-pytest                                   # 後端：133 個通過，沒有 GPU 時 2 個 GPU 測試會標為 NOT RUN 並略過
+pytest                                   # 後端：共 162 個測試；沒有 GPU 或 llmbench 時有 4 個標為 NOT RUN 並略過
 cd frontend && npm test                  # 元件與 i18n 測試
 npm run i18n:check                       # 檢查 en / zh-TW 的 key 是否一致
 npx playwright test                      # 真實瀏覽器：語言、完整任務流程、核准機制、截圖
 ```
+
+GitHub Actions（`.github/workflows/ci.yml`）會在每次 push 和 pull request 執行後端測試、前端 build／單元測試／i18n
+檢查、Playwright 流程與 Docker 映像建置。GPU 和 llama.cpp 測試需要 CI 沒有的硬體，在 CI 中會標為 NOT RUN，
+改由有日期的手動報告 [docs/LOCAL_TEST_REPORT.md](docs/LOCAL_TEST_REPORT.md) 記錄。各份報告中的測試數量反映當時的程式碼與機器。
 
 ## 文件
 

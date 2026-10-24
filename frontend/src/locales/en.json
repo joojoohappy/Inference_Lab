@@ -4,9 +4,9 @@
       "label": "Live measured",
       "help": "Measured on this machine during this session, by the code shown in the Code Explorer."
     },
-    "VERIFIED_IMPORTED": {
-      "label": "Verified import",
-      "help": "Imported from a file whose schema and checksum were verified. Measured elsewhere, not on this machine."
+    "IMPORTED": {
+      "label": "Imported (unverified)",
+      "help": "Imported from a file whose schema is valid and whose checksum matches. That only shows the file was not edited after export: anyone can write a record with a matching checksum, so the origin of these numbers is not verified and they are not claimed as measurements."
     },
     "DEMO_SAMPLE": {
       "label": "Demo sample",
@@ -476,7 +476,10 @@
     "notComparable": "Not a clean comparison",
     "differences": "What changed",
     "warn": {
-      "non_measured_provenance": "One side is not a live or verified measurement.",
+      "non_measured_provenance": "One side is not a live measurement.",
+      "imported_unverified": "One side is an imported record whose origin is not verified.",
+      "unknown_model_revision": "The model revision is unknown for at least one side, so the weights may differ.",
+      "unknown_engine_version": "The engine version is unknown for at least one side.",
       "more_than_one_variable_changed": "More than one variable changed, so you cannot tell which one caused the difference.",
       "no_variable_changed": "Nothing changed between the two; differences are noise."
     },
@@ -532,7 +535,7 @@
     "save": "Save notes",
     "saved": "Saved",
     "report": "Generate a report",
-    "reportSub": "Only live or verified measurements are claimed as results. Demo, failed and not-run records are listed separately.",
+    "reportSub": "Only live measurements from this machine are claimed as results. Imported records get their own, labelled section; demo, failed and not-run records are listed separately.",
     "pick": "Experiments to include",
     "reportLang": "Report language",
     "decision": "Your decision (written by you)",
@@ -547,7 +550,7 @@
     "runsSub": "Every run, including blocked, not-run and failed ones.",
     "record": "record",
     "import": "Import JSON…",
-    "importNote": "Imports are checked (schema + checksum) and labelled VERIFIED IMPORTED.",
+    "importNote": "Imports are checked for a valid schema and matching checksums, then labelled IMPORTED. A checksum shows the file was not edited after export; it does not prove the numbers were really measured.",
     "imported": "Imported {{id}}",
     "importFailed": "Import refused",
     "pickExp": "Pick an experiment to see its details and notes."

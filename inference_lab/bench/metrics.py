@@ -41,6 +41,8 @@ class RequestSample:
     ttft_s: float | None
     output_tokens: int
     error: str | None = None
+    # False when the server reported no usage and output_tokens is a count of text chunks, not tokens.
+    tokens_exact: bool = True
 
     @property
     def ok(self) -> bool:
@@ -52,13 +54,13 @@ class RequestSample:
 
     @property
     def tpot_s(self) -> float | None:
-        if not self.ok or self.ttft_s is None or self.output_tokens < 2:
+        if not self.ok or not self.tokens_exact or self.ttft_s is None or self.output_tokens < 2:
             return None
         return (self.e2e_s - self.ttft_s) / (self.output_tokens - 1)
 
     def to_row(self) -> list[Any]:
         return [round(self.start, 6), None if self.end is None else round(self.end, 6),
-                None if self.ttft_s is None else round(self.ttft_s, 6), self.output_tokens, self.error]
+                None if self.ttft_s is None else round(self.ttft_s, 6), self.output_tokens, self.error, self.tokens_exact]
 
 
 def summarize(samples: list[RequestSample], wall_s: float) -> dict[str, Any]:
@@ -68,7 +70,10 @@ def summarize(samples: list[RequestSample], wall_s: float) -> dict[str, Any]:
         if s.error:
             errors[s.error] = errors.get(s.error, 0) + 1
     ms = lambda xs: [x * 1000 if x is not None else None for x in xs]  # noqa: E731
-    total_tokens = sum(s.output_tokens for s in ok)
+    exact = [s for s in ok if s.tokens_exact]
+    source = "usage" if len(exact) == len(ok) else ("chunks" if not exact else "mixed")
+    # Token throughput is only reported when every successful request has a server-reported token count.
+    total_tokens = sum(s.output_tokens for s in ok) if source == "usage" else None
     return {
         "requests": len(samples),
         "succeeded": len(ok),
@@ -79,9 +84,11 @@ def summarize(samples: list[RequestSample], wall_s: float) -> dict[str, Any]:
         "ttft_ms": dist(ms([s.ttft_s for s in ok])),
         "tpot_ms": dist(ms([s.tpot_s for s in ok])),
         "e2e_ms": dist(ms([s.e2e_s for s in ok])),
+        "token_count_source": source,
         "output_tokens_total": total_tokens,
+        "output_chunks_total": sum(s.output_tokens for s in ok if not s.tokens_exact) if source != "usage" else None,
         "request_throughput_rps": len(ok) / wall_s if wall_s > 0 else None,
-        "output_throughput_tps": total_tokens / wall_s if wall_s > 0 else None,
+        "output_throughput_tps": total_tokens / wall_s if wall_s > 0 and total_tokens is not None else None,
     }
 
 
