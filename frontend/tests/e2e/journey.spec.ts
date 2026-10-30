@@ -113,6 +113,8 @@ test("arena compares the two real benchmarks and labels demo data", async ({ pag
   await page.goto("/#/arena");
   await page.getByTestId("cmp-run").click();
   await expect(page.getByTestId("comparison")).toContainText("workload.concurrency");
+  // Each metric shows a 95% interval for the difference (both benchmarks ran more than one trial).
+  await expect(page.getByTestId("ci-ttft_p50_ms")).toContainText(/…/);
   await expect(page.locator('[data-provenance="DEMO_SAMPLE"]').first()).toBeVisible();
   await expect(page.locator('[data-provenance="LIVE_MEASURED"]').first()).toBeVisible();
 });

@@ -17,6 +17,8 @@
   "report.observations": "Observations",
   "report.obs.change": "{metric}: {baseline} -> {candidate} ({pct}%). The min-max ranges across trials do not overlap.",
   "report.obs.noise": "{metric}: {baseline} -> {candidate} ({pct}%). The min-max ranges across trials overlap, so this may be noise.",
+  "report.obs.significant": "{metric}: {baseline} -> {candidate} ({pct}%). Difference of trial means {diff}, 95% CI {lo} to {hi} ({na} vs {nb} trials): the interval excludes zero, so the difference is unlikely to be trial-to-trial noise on this machine.",
+  "report.obs.not_significant": "{metric}: {baseline} -> {candidate} ({pct}%). Difference of trial means {diff}, 95% CI {lo} to {hi} ({na} vs {nb} trials): the interval includes zero, so these trials do not show a real difference. More trials would narrow it.",
   "report.limitations": "Limitations",
   "report.lim.few_trials": "Fewer than 3 trials in at least one benchmark: spread estimates are weak.",
   "report.lim.cpu_only": "Measured without a GPU. Results do not predict GPU serving performance.",

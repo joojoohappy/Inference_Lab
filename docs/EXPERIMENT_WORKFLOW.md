@@ -48,8 +48,12 @@ measured here. Imported records (`imported_unverified`) and unknown model revisi
 (`unknown_model_revision`, `unknown_engine_version`) are warnings that make a comparison not clean: an unknown
 value is a limitation, not a match. The check is field-level; it cannot see settings the record does not store
 (server flags beyond those listed, background load, thermal state), so treat "comparable" as necessary, not
-sufficient. Each metric shows % change, better/worse, and whether the trial ranges overlap ("may be noise").
-Overlap is a noise hint, not a significance test.
+sufficient. Each metric shows % change, better/worse, and a **Welch 95% confidence interval for the difference of
+trial means**; the difference is called significant only when that interval excludes zero. Each aggregate also
+keeps its per-trial values and a 95% t interval for its mean. With 2-3 trials the intervals are wide, which is the
+honest answer: run more trials to narrow them. The interval covers trial-to-trial noise on one machine at one
+time, not other machines, other days or uncontrolled background load. Records saved before this change have no
+per-trial values and fall back to the min-max overlap hint.
 
 ## Example result from the build machine (4 vCPU, no GPU, tiny random model, mini server)
 

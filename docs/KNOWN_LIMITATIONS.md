@@ -15,7 +15,8 @@
 * The mini server serves one request at a time (a lock around `generate`). That is deliberate for teaching
   queueing, but it means CPU concurrency experiments always show queueing, not batching.
 * The tiny teaching model has random weights. Its text is gibberish; its timings and tokens are real.
-* Benchmarks on shared or virtual machines are noisy. Trials and min/max help but do not remove noise.
+* Benchmarks on shared or virtual machines are noisy. Trials and 95% confidence intervals make the noise visible
+  but do not remove it, and they assume trials are independent samples (no warm-up drift across trials).
 * Closed-loop load only (fixed in-flight requests). Open-loop arrival rates (Poisson) are not implemented.
 * TTFT is measured at the client from the first streamed chunk, so it includes local HTTP overhead.
 * Memory estimates are heuristics (weights + 20% + 0.5 GB + KV cache). Activations and engine pre-allocation are not modelled.

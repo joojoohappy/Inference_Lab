@@ -44,9 +44,18 @@ def _observations(cmp: dict[str, Any], lang: str) -> list[str]:
     for k, row in cmp["metrics"].items():
         if row.get("change_pct") is None:
             continue
+        common = dict(metric=k, baseline=_fmt(row["baseline"], 2), candidate=_fmt(row["candidate"], 2),
+                      pct=_fmt(row["change_pct"], 1))
+        if row.get("significant") is not None:
+            lo, hi = row["diff_ci95"]
+            na, nb = row["trials"]
+            key = "report.obs.significant" if row["significant"] else "report.obs.not_significant"
+            obs.append(t(lang, key, diff=_fmt(row["diff_mean"], 2), lo=_fmt(lo, 2), hi=_fmt(hi, 2), na=na, nb=nb,
+                         **common))
+            continue
+        # Older records without per-trial values: fall back to the min-max overlap hint.
         key = "report.obs.noise" if row.get("ranges_overlap") else "report.obs.change"
-        obs.append(t(lang, key, metric=k, baseline=_fmt(row["baseline"], 2), candidate=_fmt(row["candidate"], 2),
-                     pct=_fmt(row["change_pct"], 1)))
+        obs.append(t(lang, key, **common))
     return obs
 
 

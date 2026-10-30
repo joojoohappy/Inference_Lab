@@ -180,7 +180,7 @@ function ComparePanel() {
             {cmp.comparability.warnings.map((w: string) => <div key={w} className="small">⚠ {t(`arena.warn.${w}`, { defaultValue: w })}</div>)}
           </div>
           <table className="data" style={{ marginTop: 10 }}>
-            <thead><tr><th>{t("arena.metric")}</th><th className="num">{t("charts.baseline")}</th><th className="num">{t("charts.candidate")}</th><th className="num">{t("arena.change")}</th><th>{t("arena.noise")}</th></tr></thead>
+            <thead><tr><th>{t("arena.metric")}</th><th className="num">{t("charts.baseline")}</th><th className="num">{t("charts.candidate")}</th><th className="num">{t("arena.change")}</th><th title={t("arena.ciHelp")}>{t("arena.ci")}</th><th>{t("arena.noise")}</th></tr></thead>
             <tbody>
               {METRICS.map(({ key }) => {
                 const m = cmp.metrics[key];
@@ -191,6 +191,7 @@ function ComparePanel() {
                     <td className="num">{fmt(m.baseline)}</td>
                     <td className="num">{fmt(m.candidate)}</td>
                     <td className={`num ${m.better === true ? "good" : m.better === false ? "bad" : ""}`}>{m.change_pct == null ? "—" : `${m.change_pct > 0 ? "+" : ""}${fmt(m.change_pct, 0)}%`}</td>
+                    <td className="small" data-testid={`ci-${key}`}>{m.diff_ci95 == null ? "—" : `${fmt(m.diff_ci95[0])} … ${fmt(m.diff_ci95[1])} · ${m.significant ? t("arena.significant") : t("arena.notSignificant")}`}</td>
                     <td className="small">{m.ranges_overlap == null ? "" : m.ranges_overlap ? t("arena.overlap") : t("arena.separated")}</td>
                   </tr>
                 );
