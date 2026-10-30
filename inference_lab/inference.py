@@ -12,7 +12,6 @@ Two model sources:
 from __future__ import annotations
 
 import json
-import threading
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -175,9 +174,11 @@ def run_inference(ref: str, prompt: str, max_new_tokens: int = 24, seed: int = 0
     }
 
 
-def download_model(model_id: str, revision: str | None, allow_patterns: list[str], log: Log = _noop,
-                   cancel: threading.Event | None = None) -> dict[str, Any]:
-    """Download approved files with huggingface_hub. Called only after explicit approval."""
+def download_model(model_id: str, revision: str | None, allow_patterns: list[str], log: Log = _noop) -> dict[str, Any]:
+    """Download approved files with huggingface_hub. Called only after explicit approval.
+
+    snapshot_download has no cancellation hook, so a started download runs to completion even if the run is
+    stopped; the caller checks for a stop request just before calling this."""
     from huggingface_hub import snapshot_download
 
     dest = model_dir_for(model_id)

@@ -23,7 +23,7 @@ Build Inference Lab as a standalone project with a clean seam for importing an e
 
 * The experiment record format (`inference_lab/experiments.py`, schema v1) is documented and checksummed.
   Results from any other tool can be brought in through `POST /api/experiments/import` or the Journal's
-  _Import JSON_ button. Imported records are labelled `VERIFIED_IMPORTED`, never `LIVE_MEASURED`.
+  _Import JSON_ button. Imported records are labelled `IMPORTED` (origin not verified; renamed from `VERIFIED_IMPORTED`), never `LIVE_MEASURED`.
 * The benchmark engine talks to any **OpenAI-compatible** `/v1/completions` endpoint on localhost
   (`inference_lab/bench/loadgen.py`), so an existing server or harness can be measured without code changes.
 * Every allowlisted action declares the source files and tests it depends on (`ActionSpec.sources/tests`),

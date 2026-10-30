@@ -9,7 +9,16 @@ Run statuses:
   not_run   the machine lacks a required capability (nothing executed)
   running   executing; heartbeat_at updates while it is alive
   succeeded executed and produced a result
-  failed    executed and failed; the error stays visible
+  failed    executed and failed; the error stays visible (error.code "timeout" or "cancelled" when the run was
+            stopped by its deadline or by the user)
+
+Timeouts and cancellation are cooperative. Each action runs in a worker thread with a deadline of
+`timeout_s`. When the deadline passes (or POST /api/runs/{id}/cancel is called) the run is marked failed at
+once and a stop flag is set; long actions check that flag (benchmarks before every request, server start
+while waiting for health, downloads before they start) and stop. Python threads cannot be killed, so a call
+that never checks the flag (one model.generate(), one file download) finishes in the background and its
+result is discarded. At most `INFERENCE_LAB_MAX_CONCURRENT_RUNS` workers (default 4) may be alive at once,
+counting stopped ones that are still finishing; further submissions are refused as not_run.
 """
 
 from __future__ import annotations
@@ -134,6 +143,7 @@ class Run:
     mission_id: str | None = None
     step_id: str | None = None
     approval: dict[str, Any] | None = None
+    stop_requested_at: float | None = None
 
     def log(self, msg: str, level: str = "info") -> None:
         self.logs.append({"t": time.time(), "level": level, "msg": msg})
@@ -144,6 +154,14 @@ class Run:
 class Ctx:
     run: Run
     lab: "Lab"
+    stop: threading.Event = field(default_factory=threading.Event)
+
+    def cancelled(self) -> bool:
+        return self.stop.is_set()
+
+    def check_cancelled(self) -> None:
+        if self.stop.is_set():
+            raise ActionError("cancelled", "the run was stopped")
 
     def log(self, msg: str, level: str = "info") -> None:
         self.run.log(msg, level)
@@ -273,6 +291,7 @@ def _download(ctx: Ctx, p: DownloadParams) -> dict[str, Any]:
         while not stop.wait(1.0):
             ctx.progress(min(0.99, inference.dir_size(target) / est))
 
+    ctx.check_cancelled()  # last point where a stop takes effect: snapshot_download cannot be interrupted
     threading.Thread(target=watch, daemon=True).start()
     try:
         res = inference.download_model(p.model, p.revision or info["summary"].get("revision"),
@@ -338,7 +357,11 @@ def _server_start(ctx: Ctx, p: ServerParams) -> dict[str, Any]:
     ctx.log("$ " + shlex.join(info.argv))
     ctx.log(f"waiting for GET {info.base_url}/health")
     t0 = time.time()
-    ok = ctx.lab.servers.wait_healthy(timeout, on_tick=lambda h: ctx.progress(min(0.95, (time.time() - t0) / timeout)))
+    def tick(h: Any) -> None:
+        ctx.check_cancelled()
+        ctx.progress(min(0.95, (time.time() - t0) / timeout))
+
+    ok = ctx.lab.servers.wait_healthy(timeout, on_tick=tick)
     h = ctx.lab.servers.health()
     if not ok:
         tail = h.get("log_tail", "")
@@ -377,8 +400,10 @@ def _bench(ctx: Ctx, p: BenchParams) -> dict[str, Any]:
                       # same as llmbench: no prompt reuse, so every request pays its full prefill
                       extra_body={"cache_prompt": False} if srv.kind.startswith("llamacpp") else {})
     res = run_benchmark(cfg, server_pid=ctx.lab.servers._proc.pid if ctx.lab.servers._proc else None,
-                        log=ctx.log, progress=ctx.progress)
+                        log=ctx.log, progress=ctx.progress, should_stop=ctx.cancelled)
     scan = ctx.lab.scan()
+    if res.get("aborted") == "cancelled":
+        raise ActionError("cancelled", "benchmark stopped before it finished; no record was saved")
     if res.get("aborted"):
         raise ActionError("benchmark_aborted", res["aborted"])
     any_ok = any(t["succeeded"] for t in res["trials"])
@@ -404,8 +429,10 @@ def _compare(ctx: Ctx, p: CompareParams) -> dict[str, Any]:
         a, b = ctx.lab.store.get(p.baseline_id), ctx.lab.store.get(p.candidate_id)
     except (FileNotFoundError, ValueError) as e:
         raise ActionError("experiment_not_found", str(e)) from e
-    ctx.run.provenance = Provenance.LIVE_MEASURED.value if all(
-        r["provenance"] == Provenance.LIVE_MEASURED.value for r in (a, b)) else Provenance.VERIFIED_IMPORTED.value
+    # A comparison is only as trustworthy as its weakest input.
+    provs = {Provenance(r["provenance"]) for r in (a, b)}
+    weakest = (Provenance.DEMO_SAMPLE, Provenance.FAILED, Provenance.NOT_RUN, Provenance.IMPORTED, Provenance.LIVE_MEASURED)
+    ctx.run.provenance = next(x for x in weakest if x in provs).value
     return compare_records(a, b)
 
 
@@ -496,6 +523,9 @@ class Lab:
         self.inspected: dict[str, dict[str, Any]] = {}
         self._lock = threading.Lock()
         self.on_finish: list[Callable[[Run], None]] = []
+        self._workers: dict[str, threading.Thread] = {}
+        self._stops: dict[str, threading.Event] = {}
+        self._timers: dict[str, threading.Timer] = {}
 
     def scan(self) -> dict[str, Any]:
         if self.last_scan is None:
@@ -538,35 +568,92 @@ class Lab:
             run.log(f"not run: this machine lacks {', '.join(missing)}", "warn")
             self._persist(run)
             return run
-        t = threading.Thread(target=self._execute, args=(spec, p, run), daemon=True)
+        stop = threading.Event()
+        t = threading.Thread(target=self._execute, args=(spec, p, run, stop), daemon=True)
+        with self._lock:
+            alive = [rid for rid, w in self._workers.items() if w.is_alive()]
+            limit = load_settings().max_concurrent_runs
+            if len(alive) >= limit:
+                run.status = "not_run"
+                run.error = {"code": "too_many_runs", "detail": f"{len(alive)} run(s) still active; limit {limit}"}
+                run.log(f"not run: {len(alive)} run(s) still active (limit {limit}); nothing was executed", "warn")
+                busy = True
+            else:
+                self._workers = {rid: self._workers[rid] for rid in alive}
+                self._stops = {rid: self._stops[rid] for rid in alive if rid in self._stops}
+                self._workers[run.id], self._stops[run.id] = t, stop
+                busy = False
+        if busy:
+            self._persist(run)
+            return run
         run.status = "running"
         run.started_at = run.heartbeat_at = time.time()
+        watchdog = threading.Timer(spec.timeout_s, self._stop_run, args=(run.id, "timeout",
+                                   f"exceeded the {spec.timeout_s:g}s time limit"))
+        watchdog.daemon = True
+        self._timers[run.id] = watchdog
+        watchdog.start()
         t.start()
         if wait:
             t.join()
         return run
 
-    def _execute(self, spec: ActionSpec, p: BaseModel, run: Run) -> None:
-        ctx = Ctx(run, self)
-        try:
-            run.result = spec.handler(ctx, p)
-            run.status = "succeeded"
-            run.progress = 1.0
-        except ActionError as e:
-            run.status = "failed"
-            run.error = {"code": e.code, "detail": e.detail}
-            if run.provenance != Provenance.FAILED.value and run.experiment_id is None:
-                run.provenance = Provenance.FAILED.value
-            run.log(f"failed: {e.code} {e.detail[:500]}", "error")
-        except Exception as e:  # noqa: BLE001 - surface every failure to the user
+    def cancel(self, run_id: str) -> Run:
+        """Ask a running action to stop. Returns the run (already marked failed/cancelled if it was running)."""
+        run = self.runs[run_id]
+        self._stop_run(run_id, "cancelled", "cancelled by the user")
+        return run
+
+    def _stop_run(self, run_id: str, code: str, detail: str) -> None:
+        with self._lock:
+            run, stop = self.runs.get(run_id), self._stops.get(run_id)
+            if run is None or stop is None or run.status != "running":
+                return
+            stop.set()
             run.status = "failed"
             run.provenance = Provenance.FAILED.value
-            run.error = {"code": "unexpected_error", "detail": f"{type(e).__name__}: {e}",
-                         "trace": traceback.format_exc()[-3000:]}
-            run.log(f"failed: {type(e).__name__}: {e}", "error")
-        finally:
-            run.finished_at = time.time()
-            self._persist(run)
+            run.error = {"code": code, "detail": detail}
+            run.stop_requested_at = run.finished_at = time.time()
+        run.log(f"stopped: {detail}; any work still in progress will be discarded", "error")
+        self._persist(run)
+
+    def _execute(self, spec: ActionSpec, p: BaseModel, run: Run, stop: threading.Event | None = None) -> None:
+        ctx = Ctx(run, self, stop or threading.Event())
+        if ctx.cancelled():
+            return
+        result: Any = None
+        status, error, prov = "succeeded", None, None
+        try:
+            result = spec.handler(ctx, p)
+        except ActionError as e:
+            status, error = "failed", {"code": e.code, "detail": e.detail}
+            if run.provenance != Provenance.FAILED.value and run.experiment_id is None:
+                prov = Provenance.FAILED.value
+        except Exception as e:  # noqa: BLE001 - surface every failure to the user
+            status, prov = "failed", Provenance.FAILED.value
+            error = {"code": "unexpected_error", "detail": f"{type(e).__name__}: {e}",
+                     "trace": traceback.format_exc()[-3000:]}
+        timer = self._timers.pop(run.id, None)
+        if timer:
+            timer.cancel()
+        with self._lock:
+            stopped = stop is not None and stop.is_set()
+            if not stopped:
+                run.status, run.finished_at = status, time.time()
+                if status == "succeeded":
+                    run.result, run.progress = result, 1.0
+                else:
+                    run.error = error
+                    if prov:
+                        run.provenance = prov
+        if stopped:
+            # The deadline or a cancel already closed this run; keep that outcome and drop the late result.
+            run.log("worker finished after the run was stopped; its result was discarded", "warn")
+            self._write(run)
+            return
+        if status == "failed" and error:
+            run.log(f"failed: {error['code']} {error['detail'][:500]}", "error")
+        self._persist(run)
 
     def _persist(self, run: Run) -> None:
         for cb in self.on_finish:
@@ -574,6 +661,9 @@ class Lab:
                 cb(run)
             except Exception:  # noqa: BLE001 - a listener must not hide the run
                 traceback.print_exc()
+        self._write(run)
+
+    def _write(self, run: Run) -> None:
         d = load_settings().ensure().runs_dir
         (d / f"{run.id}.json").write_text(json.dumps(asdict(run), default=str, indent=1), encoding="utf-8")
 

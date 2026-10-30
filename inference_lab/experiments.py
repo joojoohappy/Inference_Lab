@@ -18,7 +18,7 @@ from typing import Any
 from . import __version__
 from .bench.metrics import compare as compare_aggregates
 from .config import REPO_ROOT, load_settings
-from .provenance import Provenance, is_claimable
+from .provenance import LEGACY_IMPORTED, Provenance, is_claimable, is_imported
 
 SCHEMA_VERSION = 1
 # Settings that define a benchmark workload. Changing more than one between a baseline and a
@@ -44,6 +44,18 @@ def checksum(result: Any) -> str:
     return hashlib.sha256(json.dumps(result, sort_keys=True, default=str).encode()).hexdigest()
 
 
+# Fields left out of the whole-record checksum: notes may be added later, and the checksums and import
+# bookkeeping are written after the hash is taken.
+_UNHASHED = {"notes", "checksum", "record_checksum", "imported_from", "imported_at", "import_check"}
+
+
+def record_checksum(rec: dict[str, Any]) -> str:
+    """SHA-256 over every field that describes the measurement (model, hardware, engine, params, environment,
+    result, provenance...). Detects edits after export. It is NOT a signature: whoever writes a record can
+    compute a matching value, so it proves internal consistency, never authenticity."""
+    return checksum({k: v for k, v in rec.items() if k not in _UNHASHED})
+
+
 def new_record(kind: str, provenance: Provenance, *, model: dict[str, Any] | None = None,
                hardware: dict[str, Any] | None = None, engine: dict[str, Any] | None = None,
                params: dict[str, Any] | None = None, result: Any = None, mission_id: str | None = None,
@@ -66,6 +78,14 @@ def new_record(kind: str, provenance: Provenance, *, model: dict[str, Any] | Non
         "notes": notes or {},
     }
     rec["checksum"] = checksum(rec["result"])
+    rec["record_checksum"] = record_checksum(rec)
+    return rec
+
+
+def _upgrade(rec: dict[str, Any]) -> dict[str, Any]:
+    """Records saved before the IMPORTED rename said VERIFIED_IMPORTED; present them with today's label."""
+    if rec.get("provenance") == LEGACY_IMPORTED:
+        rec["provenance"] = Provenance.IMPORTED.value
     return rec
 
 
@@ -94,7 +114,7 @@ class ExperimentStore:
         return rec
 
     def get(self, exp_id: str) -> dict[str, Any]:
-        return json.loads(self._path(exp_id).read_text(encoding="utf-8"))
+        return _upgrade(json.loads(self._path(exp_id).read_text(encoding="utf-8")))
 
     def list(self, kind: str | None = None) -> list[dict[str, Any]]:
         out = []
@@ -105,11 +125,17 @@ class ExperimentStore:
                 continue
             if kind and rec.get("kind") != kind:
                 continue
-            out.append(rec)
+            out.append(_upgrade(rec))
         return out
 
     def import_record(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Accept an exported record only if its schema and checksum verify."""
+        """Accept an exported record if its schema is valid and its checksums are consistent.
+
+        This is an integrity check, not proof of origin: anyone can write a record and compute matching
+        checksums. Imported records are therefore labelled IMPORTED, kept out of "measured results", and
+        flagged when compared. Records exported before `record_checksum` existed are accepted with only the
+        result checksum, and say so in `import_check`.
+        """
         required = {"schema_version", "id", "kind", "provenance", "result", "checksum", "hardware", "params"}
         missing = required - set(data)
         if missing:
@@ -118,11 +144,21 @@ class ExperimentStore:
             raise ValueError("unsupported schema_version")
         if checksum(data["result"]) != data["checksum"]:
             raise ValueError("checksum mismatch: result was modified after export")
-        if data["provenance"] not in (Provenance.LIVE_MEASURED.value, Provenance.VERIFIED_IMPORTED.value):
-            raise ValueError("only measured records can be imported as verified")
+        has_record_sum = "record_checksum" in data
+        if has_record_sum and record_checksum(data) != data["record_checksum"]:
+            raise ValueError("record_checksum mismatch: model, hardware, engine, params or result changed after export")
+        try:
+            prov = Provenance(data["provenance"])
+        except ValueError as e:
+            raise ValueError("unknown provenance") from e
+        if prov not in (Provenance.LIVE_MEASURED, Provenance.IMPORTED):
+            raise ValueError("only measured records can be imported")
         rec = {**data, "id": f"exp-{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}",
-               "provenance": Provenance.VERIFIED_IMPORTED.value, "imported_from": data["id"],
-               "imported_at": time.time()}
+               "provenance": Provenance.IMPORTED.value, "imported_from": data["id"],
+               "imported_at": time.time(),
+               "import_check": {"schema": "valid", "result_checksum": "match",
+                                "record_checksum": "match" if has_record_sum else "absent",
+                                "origin": "not_verified"}}
         return self.save(rec)
 
 
@@ -142,8 +178,16 @@ def comparability(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
     pa, pb = a.get("params") or {}, b.get("params") or {}
     diffs += [f"workload.{k}" for k in WORKLOAD_KEYS if pa.get(k) != pb.get(k)]
     warnings = []
-    if not (is_claimable(a["provenance"]) and is_claimable(b["provenance"])):
+    provs = (a["provenance"], b["provenance"])
+    if any(is_imported(p) for p in provs):
+        warnings.append("imported_unverified")
+    if any(not is_claimable(p) and not is_imported(p) for p in provs):
         warnings.append("non_measured_provenance")
+    # Unknown identity is a limitation, not a match: two records with no model revision may be different weights.
+    if any((r.get("model") or {}).get("revision") is None for r in (a, b)):
+        warnings.append("unknown_model_revision")
+    if any((r.get("engine") or {}).get("version") is None for r in (a, b)):
+        warnings.append("unknown_engine_version")
     if len(diffs) > 1:
         warnings.append("more_than_one_variable_changed")
     if not diffs:

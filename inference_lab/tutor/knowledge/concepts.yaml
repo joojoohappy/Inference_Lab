@@ -423,11 +423,11 @@ provenance:
   references: [mlperf-inference-2020]
   levels:
     simple:
-      en: "Every number in the lab has a label saying where it came from: measured here, imported and verified, demo, not run, or failed."
-      zh-TW: "lab 裡的每個數字都有標籤，說明它從哪裡來：在這裡量的、匯入並驗證過的、示範用的、未執行的，或失敗的。"
+      en: "Every number in the lab has a label saying where it came from: measured here, imported (origin unverified), demo, not run, or failed."
+      zh-TW: "lab 裡的每個數字都有標籤，說明它從哪裡來：在這裡量的、匯入的（來源未驗證）、示範用的、未執行的，或失敗的。"
     logic:
-      en: "Only LIVE_MEASURED and VERIFIED_IMPORTED may support claims. Imports are verified by schema and checksum."
-      zh-TW: "只有 LIVE_MEASURED 和 VERIFIED_IMPORTED 可以支持結論。匯入的資料會透過 schema 和 checksum 驗證。"
+      en: "Only LIVE_MEASURED may support claims. Imports are checked for schema and checksum consistency and labelled IMPORTED; that proves the file was not edited, not where the numbers came from."
+      zh-TW: "只有 LIVE_MEASURED 可以支持結論。匯入的資料會檢查 schema 與 checksum 是否一致，並標示為 IMPORTED；這只證明檔案沒被改過，不能證明數字從哪裡來。"
     design:
       en: "Reports split claimed records from excluded ones; demo charts carry a visible DEMO_SAMPLE badge."
       zh-TW: "報告會把可主張的紀錄和被排除的紀錄分開；示範圖表會帶有明顯的 DEMO_SAMPLE 標記。"

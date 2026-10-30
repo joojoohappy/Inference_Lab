@@ -229,7 +229,7 @@ function SweepPanel() {
     api.demo().then(setDemo);
     api.experiments().then((e) => {
       // Live points: measured benchmarks of the same model + max_tokens as the newest one, one point per concurrency (newest wins).
-      const benches = e.filter((x) => x.kind === "benchmark" && (x.provenance === "LIVE_MEASURED" || x.provenance === "VERIFIED_IMPORTED") && x.headline?.ttft_p50_ms != null);
+      const benches = e.filter((x) => x.kind === "benchmark" && (x.provenance === "LIVE_MEASURED" || x.provenance === "IMPORTED") && x.headline?.ttft_p50_ms != null);
       if (!benches.length) { setLive([]); return; }
       const ref = benches[0];
       const pts = new Map<number, number>();

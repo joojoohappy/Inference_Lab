@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Provenance, Run } from "../lib/api";
 
 const PROV_CLASS: Record<string, string> = {
-  LIVE_MEASURED: "live", VERIFIED_IMPORTED: "imported", DEMO_SAMPLE: "demo", NOT_RUN: "notrun", FAILED: "failed",
+  LIVE_MEASURED: "live", IMPORTED: "imported", DEMO_SAMPLE: "demo", NOT_RUN: "notrun", FAILED: "failed",
 };
 
 export function ProvenanceBadge({ value }: { value: Provenance | string | null | undefined }) {

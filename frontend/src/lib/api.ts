@@ -1,6 +1,6 @@
 import type { Loc } from "./loc";
 
-export type Provenance = "LIVE_MEASURED" | "VERIFIED_IMPORTED" | "DEMO_SAMPLE" | "NOT_RUN" | "FAILED";
+export type Provenance = "LIVE_MEASURED" | "IMPORTED" | "DEMO_SAMPLE" | "NOT_RUN" | "FAILED";
 
 export interface Run {
   id: string;

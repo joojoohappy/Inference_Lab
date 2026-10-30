@@ -14,3 +14,17 @@ Priorities, most valuable first.
 8. **Tutor provider tests** with a recorded fixture, plus an opt-in live smoke test.
 9. **Packaging**: publish a wheel that bundles the built UI; one-command install.
 10. More languages, contributed through the same locale files and parity checks.
+
+## From the October 2026 source review
+
+These came out of an external review; the cheap parts are done (see `docs/KNOWN_LIMITATIONS.md`).
+
+* **Killable workers**: run heavy actions (generate, download, server start) in worker processes so a deadline
+  or cancel can terminate them, with a queue instead of the current refuse-when-busy cap.
+* **Evidence-grade imports**: signed records (or a raw-output bundle plus source identity) so an import can be
+  more than "schema and checksum consistent".
+* **Fuller environment fingerprint**: container image digest, model weight hash (including GGUF files), every
+  server flag, input token length, background load and GPU clocks, so comparability is not only field-level.
+* **Statistics**: confidence intervals across trials and a steady-state check, instead of min/max overlap alone.
+* **Learning outcomes**: separate "workflow complete", "solved a new problem without hints" and "explained the
+  result", and run a small study with target learners.

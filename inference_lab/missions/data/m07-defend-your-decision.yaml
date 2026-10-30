@@ -56,13 +56,13 @@ steps:
         en: "Which records can support a performance claim in a report?"
         zh-TW: "哪些紀錄可以在報告中支持效能結論？"
       options:
-        - {en: "LIVE_MEASURED and VERIFIED_IMPORTED", zh-TW: "LIVE_MEASURED 和 VERIFIED_IMPORTED"}
+        - {en: "LIVE_MEASURED records from this machine; IMPORTED ones only after re-running them here", zh-TW: "這台機器的 LIVE_MEASURED 紀錄；IMPORTED 紀錄要先在這裡重跑才行"}
         - {en: "Any record, including DEMO_SAMPLE, as long as the chart looks right", zh-TW: "任何紀錄都可以，包括 DEMO_SAMPLE，只要圖表看起來對"}
         - {en: "FAILED records, because they show worst-case behaviour", zh-TW: "FAILED 紀錄，因為它們呈現了最差情況"}
       answer: 0
       explanation:
-        en: "Only measured data supports claims. Demo samples teach; failed and not-run records are listed for honesty but describe no performance."
-        zh-TW: "只有實測資料可以支持結論。示範資料用於教學；失敗與未執行的紀錄會為了誠實而列出，但不代表任何效能。"
+        en: "Only data measured here supports claims. An imported file with a matching checksum was not edited after export, but anyone can write one, so its origin is unverified. Demo samples teach; failed and not-run records are listed for honesty but describe no performance."
+        zh-TW: "只有在這裡實測的資料可以支持結論。checksum 相符的匯入檔只代表匯出後沒被改過，但任何人都能寫出這樣的檔案，所以來源未經驗證。示範資料用於教學；失敗與未執行的紀錄會為了誠實而列出，但不代表任何效能。"
 challenge:
   prompt:
     en: "Without hints: generate the same report in Traditional Chinese (zh-TW) with your own written decision."

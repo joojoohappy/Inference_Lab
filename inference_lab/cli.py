@@ -66,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
     ui = sub.add_parser("ui")
     ui.add_argument("--host", default=None)
     ui.add_argument("--port", type=int, default=None)
+    ui.add_argument("--allow-remote", action="store_true",
+                    help="allow binding to a non-loopback address (no authentication: trusted single-user networks only)")
     sub.add_parser("hardware")
     p = sub.add_parser("inspect")
     p.add_argument("model")
@@ -110,7 +112,14 @@ def main(argv: list[str] | None = None) -> int:
         s = load_settings()
         host, port = a.host or s.host, a.port or s.port
         if host not in ("127.0.0.1", "localhost", "::1"):
-            print(f"warning: binding to {host} exposes the lab beyond this machine", file=sys.stderr)
+            if not (a.allow_remote or s.allow_remote):
+                print(f"refusing to bind to {host}: Inference Lab has no authentication, no per-user data and no job "
+                      "quotas, so anyone who can reach it can read your experiments, start heavy jobs and reset "
+                      "progress. It is a single-user tool for this machine. If you really mean it (e.g. inside a "
+                      "container published only on 127.0.0.1), pass --allow-remote or set "
+                      "INFERENCE_LAB_ALLOW_REMOTE=1.", file=sys.stderr)
+                return 2
+            print(f"warning: binding to {host} without authentication; keep it off public networks", file=sys.stderr)
         print(f"Inference Lab on http://{'127.0.0.1' if host in ('0.0.0.0', '::') else host}:{port}")
         uvicorn.run(create_app(), host=host, port=port, log_level="warning")
         return 0

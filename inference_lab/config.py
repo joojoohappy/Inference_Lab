@@ -17,6 +17,8 @@ class Settings:
     port: int
     hf_endpoint: str
     max_download_bytes: int
+    allow_remote: bool = False
+    max_concurrent_runs: int = 4
 
     @property
     def experiments_dir(self) -> Path:
@@ -50,4 +52,8 @@ def load_settings() -> Settings:
         hf_endpoint=os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/"),
         # Downloads above this size are refused even with approval (default 2 GiB).
         max_download_bytes=int(os.environ.get("INFERENCE_LAB_MAX_DOWNLOAD_BYTES", str(2 * 1024**3))),
+        # No authentication exists, so a non-loopback bind must be asked for explicitly.
+        allow_remote=os.environ.get("INFERENCE_LAB_ALLOW_REMOTE", "") == "1",
+        # Actions run in background threads; cap how many may be alive at once.
+        max_concurrent_runs=max(1, int(os.environ.get("INFERENCE_LAB_MAX_CONCURRENT_RUNS", "4"))),
     )

@@ -4,9 +4,9 @@
       "label": "現場實測",
       "help": "在這台機器、這次工作階段中，由 Code Explorer 裡顯示的程式碼實際量測。"
     },
-    "VERIFIED_IMPORTED": {
-      "label": "已驗證匯入",
-      "help": "從結構與 checksum 都驗證過的檔案匯入。是在別處量測的，不是這台機器。"
+    "IMPORTED": {
+      "label": "匯入（未驗證來源）",
+      "help": "從結構正確、checksum 相符的檔案匯入。這只代表檔案匯出後沒被改過：任何人都能自行寫出一筆 checksum 相符的紀錄，所以這些數字的來源沒有經過驗證，也不會被當成實測結果。"
     },
     "DEMO_SAMPLE": {
       "label": "示範資料",
@@ -476,7 +476,10 @@
     "notComparable": "不是乾淨的比較",
     "differences": "改變了什麼",
     "warn": {
-      "non_measured_provenance": "其中一方不是現場實測或已驗證的量測。",
+      "non_measured_provenance": "其中一方不是現場實測。",
+      "imported_unverified": "其中一方是匯入的紀錄，來源沒有經過驗證。",
+      "unknown_model_revision": "至少一方沒有記錄模型 revision，所以權重可能不同。",
+      "unknown_engine_version": "至少一方沒有記錄引擎版本。",
       "more_than_one_variable_changed": "改變了不只一個變數，所以無法判斷是哪一個造成差異。",
       "no_variable_changed": "兩者之間沒有改變任何東西，差異只是雜訊。"
     },
@@ -532,7 +535,7 @@
     "save": "儲存筆記",
     "saved": "已儲存",
     "report": "產生報告",
-    "reportSub": "只有現場實測或已驗證的量測會被當作結果。示範、失敗、未執行的紀錄會分開列出。",
+    "reportSub": "只有這台機器的現場實測會被當作結果。匯入的紀錄另列一節並加上標示；示範、失敗、未執行的紀錄會分開列出。",
     "pick": "要納入的實驗",
     "reportLang": "報告語言",
     "decision": "你的決策（由你撰寫）",
@@ -547,7 +550,7 @@
     "runsSub": "每一次執行，包含被擋下、未執行和失敗的。",
     "record": "紀錄",
     "import": "匯入 JSON…",
-    "importNote": "匯入的檔案會經過檢查（結構 + checksum），並標示為「已驗證匯入」。",
+    "importNote": "匯入的檔案會檢查結構與 checksum，並標示為「匯入（未驗證來源）」。checksum 只代表檔案匯出後沒被改過，不能證明這些數字真的有實測過。",
     "imported": "已匯入 {{id}}",
     "importFailed": "拒絕匯入",
     "pickExp": "選一個實驗查看細節和筆記。"

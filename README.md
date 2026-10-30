@@ -61,12 +61,19 @@ parameters up front). All three use the same execution and validation engine.
 | Label | Meaning |
 |---|---|
 | `LIVE_MEASURED` | Measured on this machine by the code in this repository |
-| `VERIFIED_IMPORTED` | Imported from a file whose schema and checksum verified |
+| `IMPORTED` | Imported from a file whose schema is valid and whose checksums match; **origin not verified** |
 | `DEMO_SAMPLE` | Synthetic teaching data; never evidence |
 | `NOT_RUN` | Not executed (usually a missing capability such as a GPU) |
 | `FAILED` | Executed and failed; kept and shown |
 
-Reports only claim `LIVE_MEASURED` and `VERIFIED_IMPORTED` results.
+Reports only claim `LIVE_MEASURED` results. A matching checksum shows an imported file was not edited after
+export; it does not show the numbers were ever measured, because anyone can write a record and compute its
+checksum. Imported records therefore appear in their own labelled section of a report and are flagged in
+comparisons. Re-run a benchmark on your own machine before you rely on it.
+
+A benchmark request counts as successful only if it returns HTTP 200, streams generated text and ends with
+`[DONE]`. Token counts come from the server's `usage`; if a server does not report usage, TPOT and tokens/s are
+left empty instead of being estimated from chunk counts.
 
 ## Command line
 
@@ -117,12 +124,31 @@ export INFERENCE_LAB_TUTOR=local INFERENCE_LAB_TUTOR_URL=http://127.0.0.1:8000 I
 
 The AI never decides completion, never gets a shell, and receives only redacted text.
 
+## Deployment: single user, this machine only
+
+Inference Lab is a local, single-user workbench. It has **no authentication, no per-user data and no job
+quotas**: anyone who can reach the port can read your experiments, start heavy jobs and reset your progress.
+The Host-header check blocks DNS-rebinding attacks from web pages, but it is not access control.
+
+* It listens on `127.0.0.1` by default. `inference-lab ui` refuses any other address unless you pass
+  `--allow-remote` (or set `INFERENCE_LAB_ALLOW_REMOTE=1`).
+* With Docker, publish on loopback only: `docker run -p 127.0.0.1:8765:8765 ...`.
+* Do not put it on a public network or behind a public reverse proxy. Hosting it for several people would
+  first need authentication, per-user storage, job quotas and isolated workers.
+
+Each action runs with a deadline. When it passes, or when you call `POST /api/runs/{id}/cancel`, the run is
+marked failed and long actions (benchmarks, server start) stop at their next check. A single `generate` call or
+a download already in progress cannot be interrupted and finishes in the background; its result is discarded.
+At most `INFERENCE_LAB_MAX_CONCURRENT_RUNS` actions run at once.
+
 ## Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `INFERENCE_LAB_HOME` | `~/.inference-lab` | Experiments, runs, models, reports, progress |
 | `INFERENCE_LAB_HOST` / `INFERENCE_LAB_PORT` | `127.0.0.1` / `8765` | Where the UI listens |
+| `INFERENCE_LAB_ALLOW_REMOTE` | unset | `1` allows a non-loopback host (no authentication; see above) |
+| `INFERENCE_LAB_MAX_CONCURRENT_RUNS` | `4` | Actions allowed to run at the same time |
 | `INFERENCE_LAB_MAX_DOWNLOAD_BYTES` | 2 GiB | Downloads above this are refused |
 | `HF_ENDPOINT` | `https://huggingface.co` | Hub mirror |
 | `HF_TOKEN` | unset | Your token for models you have been granted; never stored |
@@ -131,11 +157,17 @@ The AI never decides completion, never gets a shell, and receives only redacted 
 ## Tests
 
 ```bash
-pytest                                   # backend: 133 pass, 2 GPU tests skip as NOT RUN without a GPU
+pytest                                   # backend: 162 tests; without a GPU or llmbench, 4 skip as NOT RUN
 cd frontend && npm test                  # component and i18n tests
 npm run i18n:check                       # en / zh-TW key parity and usage scan
 npx playwright test                      # real browser: language, full mission journey, approvals, screenshots
 ```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs the backend tests, the frontend build, unit tests and i18n
+check, the Playwright journey and a Docker image build on every push and pull request. GPU and llama.cpp tests
+need hardware CI does not have; they are reported as NOT RUN there and covered by the dated manual report in
+[docs/LOCAL_TEST_REPORT.md](docs/LOCAL_TEST_REPORT.md). Test counts in the dated reports reflect the code and
+machine at that time.
 
 ## Documentation
 
