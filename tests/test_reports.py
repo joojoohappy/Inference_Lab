@@ -38,3 +38,13 @@ def test_imported_records_are_shown_apart_and_never_claimed():
     assert "imported and its origin is not verified" in md  # comparison warning
     zh = build_report([imp], "zh-TW")["markdown"]
     assert "匯入的結果（來源未驗證）" in zh and "沒有選到任何現場實測" in zh
+
+
+def test_report_states_the_confidence_interval():
+    a, b = bench(1), bench(4)
+    a["result"]["aggregate"]["ttft_p50_ms"].update(values=[10.0, 11.0, 12.0])
+    b["result"]["aggregate"]["ttft_p50_ms"].update(values=[20.0, 22.0, 25.0], median=22.0, min=20, max=25)
+    md = build_report([a, b], "en")["markdown"]
+    assert "95% CI" in md and "excludes zero" in md and "3 vs 3 trials" in md
+    zh = build_report([a, b], "zh-TW")["markdown"]
+    assert "95% 信賴區間" in zh

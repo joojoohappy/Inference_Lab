@@ -25,6 +25,7 @@ These came out of an external review; the cheap parts are done (see `docs/KNOWN_
   more than "schema and checksum consistent".
 * **Fuller environment fingerprint**: container image digest, model weight hash (including GGUF files), every
   server flag, input token length, background load and GPU clocks, so comparability is not only field-level.
-* **Statistics**: confidence intervals across trials and a steady-state check, instead of min/max overlap alone.
+* **Statistics**: ~~confidence intervals across trials~~ (done: Welch 95% interval per metric); still to do: a
+  steady-state check within a trial.
 * **Learning outcomes**: separate "workflow complete", "solved a new problem without hints" and "explained the
   result", and run a small study with target learners.

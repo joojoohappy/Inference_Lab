@@ -206,6 +206,8 @@ S = {
  "arena.warn.more_than_one_variable_changed": ("More than one variable changed, so you cannot tell which one caused the difference.", "改變了不只一個變數，所以無法判斷是哪一個造成差異。"),
  "arena.warn.no_variable_changed": ("Nothing changed between the two; differences are noise.", "兩者之間沒有改變任何東西，差異只是雜訊。"),
  "arena.metric": ("Metric", "指標"), "arena.change": ("Change", "變化"), "arena.noise": ("Trial ranges", "Trial 範圍"),
+ "arena.ci": ("Difference, 95% CI", "差異的 95% 信賴區間"), "arena.significant": ("excludes 0", "不含 0"), "arena.notSignificant": ("includes 0: not shown", "含 0：無法證明有差"),
+ "arena.ciHelp": ("Welch 95% interval for the difference of trial means. If it includes 0, these trials do not show a real difference.", "各輪平均差的 Welch 95% 信賴區間。若包含 0，代表這些 trial 不足以證明有真正的差異。"),
  "arena.overlap": ("overlap (may be noise)", "重疊（可能是雜訊）"), "arena.separated": ("separated", "分開"), "arena.perRequest": ("per-request latency", "每個請求的延遲"),
  "arena.suggestions": ("Suggestions from the evidence", "根據證據的建議"), "arena.noSuggestions": ("No rule matched this comparison.", "沒有規則符合這次比較。"),
  "arena.suggestNote": ("Suggestions are rule-based hypotheses. Validate them with another measured run before you rely on them.", "建議是依規則推導的假設。請用另一次實測驗證後再採用。"),

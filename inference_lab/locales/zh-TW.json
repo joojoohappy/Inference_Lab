@@ -17,6 +17,8 @@
   "report.observations": "觀察",
   "report.obs.change": "{metric}：{baseline} → {candidate}（{pct}%）。各輪的最小到最大範圍沒有重疊。",
   "report.obs.noise": "{metric}：{baseline} → {candidate}（{pct}%）。各輪的最小到最大範圍有重疊，這可能只是雜訊。",
+  "report.obs.significant": "{metric}：{baseline} → {candidate}（{pct}%）。各輪平均的差為 {diff}，95% 信賴區間 {lo} 到 {hi}（{na} 輪 vs {nb} 輪）：區間不含 0，這個差異不太可能只是這台機器上每輪之間的雜訊。",
+  "report.obs.not_significant": "{metric}：{baseline} → {candidate}（{pct}%）。各輪平均的差為 {diff}，95% 信賴區間 {lo} 到 {hi}（{na} 輪 vs {nb} 輪）：區間包含 0，這些 trial 不足以證明有真正的差異。多跑幾輪可以讓區間變窄。",
   "report.limitations": "限制",
   "report.lim.few_trials": "至少有一個 benchmark 少於 3 輪：對變異程度的估計不夠可靠。",
   "report.lim.cpu_only": "在沒有 GPU 的情況下量測。結果無法預測 GPU serving 的效能。",
