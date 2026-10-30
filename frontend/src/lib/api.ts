@@ -25,7 +25,8 @@ export interface Run {
 }
 
 export interface Check { id: string; description: Loc; path: string; op: string; value: unknown }
-export interface Quiz { question: Loc; options: Loc[]; answer: number; explanation: Loc }
+// The answer and explanation stay on the server; the explanation comes back from the quiz endpoint.
+export interface Quiz { question: Loc; options: Loc[] }
 export interface Step {
   id: string; title: Loc; what: Loc; why: Loc; concept: string | null;
   action: { id: string; params: Record<string, unknown>; editable: string[] } | null;

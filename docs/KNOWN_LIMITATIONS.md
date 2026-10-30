@@ -19,8 +19,8 @@
 * Closed-loop load only (fixed in-flight requests). Open-loop arrival rates (Poisson) are not implemented.
 * TTFT is measured at the client from the first streamed chunk, so it includes local HTTP overhead.
 * Memory estimates are heuristics (weights + 20% + 0.5 GB + KV cache). Activations and engine pre-allocation are not modelled.
-* Quiz answer indices are included in the mission data sent to the browser. Completion is still checked on the
-  server, but a curious learner could read the answer. This is a learning tool, not an exam.
+* Quiz answers and explanations stay on the server (the browser gets questions and options only), but the
+  mission YAML files are readable on the learner's own machine. This is a learning tool, not an exam.
 * Progress is per data directory and single-user. There is no authentication, no per-user data and no job
   quota; the server relies on binding to 127.0.0.1. The Host-header guard stops DNS rebinding from web pages but
   is not access control. `inference-lab ui` refuses a non-loopback address unless `--allow-remote` is given.
@@ -33,7 +33,8 @@
   progress runs to completion in the background and its result is discarded. Moving heavy work to killable
   worker processes is on the roadmap.
 * Comparability is checked per recorded field. Settings that are not recorded (all server flags, background
-  load, GPU clocks) cannot be compared, and llama.cpp GGUF models have no recorded revision.
+  load, GPU clocks) cannot be compared. GGUF models are identified by size plus a SHA-256 over the first
+  and last 4 MiB (`gguf-sampled-sha256:...`), not a full-file hash.
 * Mission "complete" means every required step passed its checks. It shows the workflow was done, not that the
   learner can explain the result or transfer it to a new problem; the hint-free challenge is a separate field.
 * Only `en` and `zh-TW` are provided. Adding a language needs a new locale file in both `inference_lab/locales/`

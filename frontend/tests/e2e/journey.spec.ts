@@ -17,15 +17,29 @@ async function runStep(page: Page, stepId: string, expectStatus = "verified") {
 async function answerQuiz(page: Page, missionId: string, stepId: string) {
   const data = await missionsData(page);
   const step = data.missions.find((m: any) => m.id === missionId).steps.find((s: any) => s.id === stepId);
+  // The browser never receives the answer index, so the test answers like a learner: try options until the
+  // server accepts one. Starting from the last option means at least one wrong answer is tried first.
+  expect(step.quiz.answer).toBeUndefined();
   const card = page.getByTestId(`step-${stepId}`);
-  const wrong = (step.quiz.answer + 1) % step.quiz.options.length;
-  // A wrong answer is never accepted as mastery.
-  await card.locator(`input[type=radio]`).nth(wrong).check();
-  await card.getByTestId("quiz-submit").click();
-  await expect(card.getByTestId("quiz-result")).toHaveClass(/warn/);
-  await expect(card).not.toHaveAttribute("data-step-status", "verified");
-  await card.locator(`input[type=radio]`).nth(step.quiz.answer).check();
-  await card.getByTestId("quiz-submit").click();
+  let wrongSeen = false;
+  for (let i = step.quiz.options.length - 1; i >= 0; i--) {
+    await card.locator(`input[type=radio]`).nth(i).check();
+    // Wait for this answer's own response; the result box still shows the previous answer until it arrives.
+    const [resp] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes(`/steps/${stepId}/quiz`) && r.request().method() === "POST"),
+      card.getByTestId("quiz-submit").click(),
+    ]);
+    const { correct } = await resp.json();
+    if (!correct) {
+      // A wrong answer is never accepted as mastery.
+      await expect(card.getByTestId("quiz-result")).toHaveClass(/warn/);
+      wrongSeen = true;
+      await expect(card).not.toHaveAttribute("data-step-status", "verified");
+      continue;
+    }
+    break;
+  }
+  expect(wrongSeen).toBe(true);
   await expect(card).toHaveAttribute("data-step-status", "verified");
 }
 

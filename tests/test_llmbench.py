@@ -90,3 +90,18 @@ def test_live_llamacpp_serve_and_benchmark(lab, backend):
         assert agg["ttft_p50_ms"]["median"] > 0 and agg["error_rate"]["median"] == 0
     finally:
         lab.submit("server.stop", {}, wait=True)
+
+
+def test_gguf_fingerprint_identifies_weights(fake_llmbench):
+    from inference_lab.actions import _local_revision
+
+    models = fake_llmbench / "models"
+    big = bytes(range(256)) * (40 * 1024)  # 10 MiB, larger than both sampled ends
+    (models / "a.gguf").write_bytes(big)
+    (models / "b.gguf").write_bytes(big[:-1] + b"\x01")  # differs only in the last byte
+    (models / "c.gguf").write_bytes(big)
+    fa, fb, fc = (_local_revision(f"gguf:{n}") for n in "abc")
+    assert fa and fa.startswith("gguf-sampled-sha256:") and fa.endswith(f":{len(big)}")
+    assert fa == fc and fa != fb
+    assert _local_revision("gguf:tiny-Q4_0").endswith(":4")  # small files are hashed whole
+    assert _local_revision("gguf:missing") is None

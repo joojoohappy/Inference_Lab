@@ -53,8 +53,31 @@ def test_tutor_cannot_complete_a_step(client):
     assert before == after and after["state"] == "available"
 
 
+def test_quiz_answers_are_not_sent_to_the_browser(client):
+    for m in client.get("/api/missions").json()["missions"]:
+        for st in m["steps"]:
+            if st["quiz"]:
+                assert "answer" not in st["quiz"] and "explanation" not in st["quiz"]
+                assert st["quiz"]["question"] and st["quiz"]["options"]
+
+
+def test_quiz_explanation_only_after_a_correct_answer(client):
+    from inference_lab.missions.engine import load_missions
+
+    m = load_missions()[0]
+    step = next(s for s in m.steps if s.quiz)
+    url = f"/api/missions/{m.id}/steps/{step.id}/quiz"
+    wrong = (step.quiz.answer + 1) % len(step.quiz.options)
+    assert client.post(url, json={"answer": wrong}).json() == {"correct": False, "explanation": None}
+    ok = client.post(url, json={"answer": step.quiz.answer}).json()
+    assert ok["correct"] is True and ok["explanation"]["en"]
+
+
 def test_wrong_quiz_answer_does_not_verify(client):
-    m = client.get("/api/missions").json()["missions"][0]
+    from inference_lab.missions.engine import load_missions
+
+    mm = load_missions()[0]
+    m = {"id": mm.id, "steps": [s.model_dump(by_alias=True) for s in mm.steps]}
     step = next(s for s in m["steps"] if s["quiz"])
     wrong = (step["quiz"]["answer"] + 1) % len(step["quiz"]["options"])
     assert client.post(f"/api/missions/{m['id']}/steps/{step['id']}/quiz", json={"answer": wrong}).json()["correct"] is False
