@@ -323,6 +323,11 @@ def _infer(ctx: Ctx, p: InferParams) -> dict[str, Any]:
 
 
 def _local_revision(model: str) -> str | None:
+    if llmbench.GGUF_REF.match(model):
+        try:
+            return llmbench.gguf_fingerprint(llmbench.resolve_model(model))
+        except (FileNotFoundError, ValueError, OSError):
+            return None
     return inference.local_revision(model)
 
 
@@ -459,7 +464,9 @@ ACTIONS: dict[str, ActionSpec] = {a.id: a for a in [
     ActionSpec("hardware.scan", NoParams, _hardware_scan, lambda p: "inference-lab hardware",
                [("inference_lab/hardware.py", "scan"), ("inference_lab/hardware.py", "probe_gpu"),
                 ("inference_lab/hardware.py", "capabilities")],
-               ["tests/test_hardware.py"], timeout_s=60),
+               # Generous: the scan imports torch/transformers in-process, which can take a minute on a cold disk,
+               # and since deadlines are enforced a tight one would fail a scan that is only slow.
+               ["tests/test_hardware.py"], timeout_s=300),
     ActionSpec("hub.inspect", ModelParams, _hub_inspect, lambda p: f"inference-lab inspect {shlex.quote(p.model)}",
                [("inference_lab/hub.py", "inspect_model"), ("inference_lab/hub.py", "summarize"),
                 ("inference_lab/memory.py", "estimate"), ("inference_lab/memory.py", "assess_compatibility")],

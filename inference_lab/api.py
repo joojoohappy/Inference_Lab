@@ -76,6 +76,16 @@ class Ask(BaseModel):
     lang: str = "en"
 
 
+def _public_mission(m: Any) -> dict[str, Any]:
+    """Mission data for the browser. Quiz answers and explanations stay on the server: the answer is checked by
+    POST .../quiz, and the explanation is returned only after a correct answer."""
+    d = m.model_dump(by_alias=True)
+    for step in d.get("steps") or []:
+        if step.get("quiz"):
+            step["quiz"] = {k: v for k, v in step["quiz"].items() if k not in ("answer", "explanation")}
+    return d
+
+
 def create_app(lab: Lab | None = None, progress: Progress | None = None) -> FastAPI:
     lab = lab or Lab()
     progress = progress or Progress()
@@ -175,7 +185,7 @@ def create_app(lab: Lab | None = None, progress: Progress | None = None) -> Fast
     @app.get("/api/missions")
     def mission_list() -> dict[str, Any]:
         caps = lab.scan()["capabilities"] if lab.last_scan else {}
-        return {"missions": [m.model_dump(by_alias=True) for m in missions.values()],
+        return {"missions": [_public_mission(m) for m in missions.values()],
                 "status": all_statuses(list(missions.values()), progress, caps),
                 "progress": progress.data, "capabilities": caps, "scanned": lab.last_scan is not None}
 

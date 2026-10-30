@@ -10,7 +10,7 @@ Priorities, most valuable first.
 4. **Open-loop load** (Poisson arrivals) and a concurrency/rate sweep action that produces one record per point.
 5. **More engines**: SGLang and llama.cpp (GGUF) servers behind the same OpenAI-compatible benchmark client.
 6. **Quantization mission**: compare bf16 vs int8/4-bit on the same model with quality checks, not only speed.
-7. **Server-side quiz answers** (send options without the answer index).
+7. ~~**Server-side quiz answers**~~ (done: the browser gets options without the answer index).
 8. **Tutor provider tests** with a recorded fixture, plus an opt-in live smoke test.
 9. **Packaging**: publish a wheel that bundles the built UI; one-command install.
 10. More languages, contributed through the same locale files and parity checks.

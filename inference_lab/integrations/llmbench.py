@@ -15,6 +15,7 @@ Nothing in the llmbench folder is modified.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import sys
@@ -75,6 +76,31 @@ def resolve_model(ref: str, root: Path | None = None) -> Path:
     if not path.is_file():
         raise FileNotFoundError(f"{path} not found")
     return path
+
+
+_SAMPLE = 4 * 1024 * 1024  # bytes hashed from each end of the file
+_fp_cache: dict[tuple[str, int, int], str] = {}
+
+
+def gguf_fingerprint(path: Path) -> str:
+    """Identity of a GGUF file for comparability: its size plus a SHA-256 over the first and last 4 MiB.
+
+    GGUF files carry no Hub revision. Hashing a multi-GB file on every benchmark is slow, while the header
+    (architecture, tensor table, quantization) and the tail differ between models and quantizations, so a
+    sampled hash plus the exact size tells "same weights" from "different weights" in practice. It is labelled
+    `sampled` because two files that differ only in the middle would get the same value.
+    """
+    st = path.stat()
+    key = (str(path.resolve()), st.st_size, st.st_mtime_ns)
+    if key not in _fp_cache:
+        h = hashlib.sha256()
+        with path.open("rb") as f:
+            h.update(f.read(_SAMPLE))
+            if st.st_size > 2 * _SAMPLE:
+                f.seek(-_SAMPLE, os.SEEK_END)
+            h.update(f.read(_SAMPLE))
+        _fp_cache[key] = f"gguf-sampled-sha256:{h.hexdigest()[:16]}:{st.st_size}"
+    return _fp_cache[key]
 
 
 def probe() -> dict[str, Any]:
